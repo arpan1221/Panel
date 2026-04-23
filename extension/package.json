@@ -1,0 +1,62 @@
+{
+  "name": "panel-vscode",
+  "displayName": "Panel",
+  "description": "Launch four-agent data-science experiments from VS Code.",
+  "version": "0.0.1",
+  "publisher": "panel",
+  "engines": {
+    "vscode": "^1.85.0"
+  },
+  "categories": ["Data Science", "Machine Learning", "Other"],
+  "activationEvents": [],
+  "main": "./out/extension.js",
+  "contributes": {
+    "commands": [
+      {
+        "command": "panel.runExperiment",
+        "title": "Panel: Run Experiment",
+        "category": "Panel"
+      },
+      {
+        "command": "panel.openDashboard",
+        "title": "Panel: Open Dashboard",
+        "category": "Panel"
+      },
+      {
+        "command": "panel.openLastRun",
+        "title": "Panel: Open Last Run",
+        "category": "Panel"
+      }
+    ],
+    "configuration": {
+      "title": "Panel",
+      "properties": {
+        "panel.backendUrl": {
+          "type": "string",
+          "default": "http://localhost:8100",
+          "description": "Panel backend base URL (HTTP)."
+        },
+        "panel.webUrl": {
+          "type": "string",
+          "default": "http://localhost:3100",
+          "description": "Panel web dashboard base URL."
+        },
+        "panel.defaultMaxSteps": {
+          "type": "number",
+          "default": 8,
+          "description": "Default max steps per experiment."
+        }
+      }
+    }
+  },
+  "scripts": {
+    "vscode:prepublish": "npm run compile",
+    "compile": "tsc -p ./",
+    "watch": "tsc -watch -p ./"
+  },
+  "devDependencies": {
+    "@types/node": "20.16.11",
+    "@types/vscode": "^1.85.0",
+    "typescript": "5.6.3"
+  }
+}
