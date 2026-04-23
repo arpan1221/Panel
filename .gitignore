@@ -1,0 +1,45 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+.venv/
+venv/
+.pytest_cache/
+.mypy_cache/
+*.egg-info/
+.ipynb_checkpoints/
+
+# Node / Next
+node_modules/
+.next/
+out/
+dist/
+*.tsbuildinfo
+
+# Environments
+.env
+.env.local
+.env.*.local
+
+# Agent runtime artifacts (per-experiment scratch)
+/runs/
+*.jsonl.tmp
+notebook_scratch.ipynb
+
+# VS Code extension builds
+extension/out/
+extension/*.vsix
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+npm-debug.log*
+
+# Supabase local
+supabase/.temp/
+
+# Allow examples to keep their data
+!examples/**/data/
