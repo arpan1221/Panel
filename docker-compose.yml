@@ -1,0 +1,69 @@
+# Panel — dev stack.
+# Usage:
+#   docker compose build
+#   docker compose up -d
+#   docker compose logs -f backend web
+#
+# Services:
+#   backend  — FastAPI on :8100 (host) → :8000 (container)
+#   web      — Next.js dev server on :3100 (host + container)
+#   agent    — CLI image; not started by default. Run on demand:
+#              docker compose run --rm agent python -m agent.loop_v0 --goal "..." --dataset ... --out runs/...
+
+services:
+  backend:
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+    image: panel-backend:dev
+    container_name: panel-backend
+    env_file: .env
+    environment:
+      - PANEL_RUNS_DIR=/app/runs
+    ports:
+      - "8100:8000"
+    volumes:
+      - ./runs:/app/runs
+      - ./examples:/app/examples:ro
+      - ./backend:/app/backend
+      - ./agent:/app/agent
+      - ./shared:/app/shared
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://localhost:8000/health"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+
+  web:
+    build:
+      context: ./web
+      dockerfile: Dockerfile
+    image: panel-web:dev
+    container_name: panel-web
+    environment:
+      - PANEL_BACKEND=http://backend:8000
+      - NODE_ENV=development
+    ports:
+      - "3100:3100"
+    volumes:
+      - ./web:/app
+      - /app/node_modules
+      - /app/.next
+    depends_on:
+      backend:
+        condition: service_healthy
+
+  agent:
+    build:
+      context: .
+      dockerfile: agent/Dockerfile
+    image: panel-agent:dev
+    container_name: panel-agent
+    env_file: .env
+    profiles: ["cli"]  # not started by `up`; invoke with `compose run --rm agent ...`
+    volumes:
+      - ./runs:/app/runs
+      - ./examples:/app/examples:ro
+      - ./agent:/app/agent
+      - ./shared:/app/shared
