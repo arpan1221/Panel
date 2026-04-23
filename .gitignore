@@ -26,6 +26,10 @@ dist/
 *.jsonl.tmp
 notebook_scratch.ipynb
 
+# Plots/artifacts dropped in repo root by agent cells without an out-dir
+/profiling.png
+/*.png
+
 # VS Code extension builds
 extension/out/
 extension/*.vsix
@@ -41,5 +45,6 @@ npm-debug.log*
 # Supabase local
 supabase/.temp/
 
-# Allow examples to keep their data
+# Allow examples to keep their data, but not agent-generated plots dropped there
 !examples/**/data/
+examples/*/data/*.png
