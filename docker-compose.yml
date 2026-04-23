@@ -43,6 +43,7 @@ services:
     container_name: panel-web
     environment:
       - PANEL_BACKEND=http://backend:8000
+      - NEXT_PUBLIC_BACKEND_BROWSER=http://localhost:8100
       - NODE_ENV=development
     ports:
       - "3100:3100"
