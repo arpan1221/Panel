@@ -15,6 +15,11 @@ const PRESETS: { label: string; goal: string; dataset: string }[] = [
     goal: "Predict survival on Titanic. Train at least one model with cross-validation and tell me which features actually matter.",
     dataset: "examples/titanic/data/train.csv",
   },
+  {
+    label: "House prices — regression",
+    goal: "Predict house sale price. Train at least one model with cross-validation and report a regression metric (RMSE or R²). Tell me which features matter most.",
+    dataset: "examples/house_prices/data/train.csv",
+  },
 ];
 
 export default function NewRunForm() {
