@@ -1,5 +1,19 @@
 import Link from "next/link";
 import { listExperiments, SERVER_BACKEND } from "@/lib/backend";
+import { isAuthConfigured, serverClient } from "@/lib/supabase";
+
+async function getSignedInEmail(): Promise<string | null> {
+  if (!isAuthConfigured()) return null;
+  try {
+    const sb = serverClient();
+    const {
+      data: { user },
+    } = await sb.auth.getUser();
+    return user?.email ?? null;
+  } catch {
+    return null;
+  }
+}
 
 async function getHealth(): Promise<{ ok: boolean; active: number }> {
   try {
@@ -82,9 +96,10 @@ const AGENTS: {
 ];
 
 export default async function Home() {
-  const [health, runs] = await Promise.all([
+  const [health, runs, signedInEmail] = await Promise.all([
     getHealth(),
     listExperiments().catch(() => ({ runs: [], count: 0 })),
+    getSignedInEmail(),
   ]);
 
   const latestComplete = runs.runs.find((r) => r.status === "complete");
@@ -112,6 +127,19 @@ export default async function Home() {
               ? `backend online · ${health.active} active`
               : "backend offline"}
           </div>
+          {signedInEmail ? (
+            <div className="mt-1 flex items-center justify-end gap-2">
+              <span className="font-mono">{signedInEmail}</span>
+              <form action="/auth/logout" method="POST">
+                <button
+                  type="submit"
+                  className="rounded border border-neutral-800 px-2 py-0.5 text-[10px] uppercase tracking-wider hover:border-neutral-600 hover:text-neutral-300"
+                >
+                  sign out
+                </button>
+              </form>
+            </div>
+          ) : null}
         </div>
       </header>
 

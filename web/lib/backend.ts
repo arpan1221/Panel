@@ -44,12 +44,21 @@ export type KnowledgeEntry = {
   confidence: number;
 };
 
+export type ExperimentMeta = {
+  experiment_id?: string;
+  goal?: string;
+  dataset?: string;
+  max_steps?: number;
+  created_at?: string;
+};
+
 export type ExperimentFull = {
   experiment_id: string;
   status: RunSummary["status"];
   event_count: number;
   events: DeliberationEvent[];
   knowledge: KnowledgeEntry[];
+  meta?: ExperimentMeta;
 };
 
 export async function listExperiments(): Promise<{

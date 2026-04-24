@@ -41,6 +41,7 @@ services:
       dockerfile: Dockerfile
     image: panel-web:dev
     container_name: panel-web
+    env_file: .env
     environment:
       - PANEL_BACKEND=http://backend:8000
       - NEXT_PUBLIC_BACKEND_BROWSER=http://localhost:8100

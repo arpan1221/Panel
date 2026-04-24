@@ -138,9 +138,20 @@ def list_experiments() -> dict:
 
 @app.post("/experiments")
 async def create_experiment(body: ExperimentCreate) -> dict:
+    from datetime import datetime, timezone
+
     experiment_id = f"exp_{uuid.uuid4().hex[:10]}"
     rd = run_dir_for(experiment_id)
     rd.mkdir(parents=True, exist_ok=True)
+
+    meta = {
+        "experiment_id": experiment_id,
+        "goal": body.goal,
+        "dataset": body.dataset,
+        "max_steps": body.max_steps,
+        "created_at": datetime.now(timezone.utc).isoformat(),
+    }
+    (rd / "meta.json").write_text(json.dumps(meta, indent=2))
 
     # Must be visible inside the container (volume-mounted).
     cmd = [
@@ -195,12 +206,20 @@ def get_experiment(experiment_id: str) -> dict:
         raise HTTPException(status_code=404, detail="experiment not found")
     events = read_jsonl(rd / "deliberation.jsonl")
     knowledge = read_jsonl(rd / "knowledge.jsonl")
+    meta_path = rd / "meta.json"
+    meta: dict = {}
+    if meta_path.exists():
+        try:
+            meta = json.loads(meta_path.read_text())
+        except json.JSONDecodeError:
+            meta = {}
     return {
         "experiment_id": experiment_id,
         "status": run_status_from_disk(experiment_id),
         "event_count": len(events),
         "events": events,
         "knowledge": knowledge,
+        "meta": meta,
     }
 
 
