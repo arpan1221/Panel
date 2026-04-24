@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { listExperiments, SERVER_BACKEND } from "@/lib/backend";
-import { isAuthConfigured, serverClient } from "@/lib/supabase";
+import { isAuthConfigured } from "@/lib/supabase";
+import { serverClient } from "@/lib/supabase-server";
 
 async function getSignedInEmail(): Promise<string | null> {
   if (!isAuthConfigured()) return null;

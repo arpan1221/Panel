@@ -1,6 +1,6 @@
 "use client";
 
-import { browserClient } from "@/lib/supabase";
+import { browserClient } from "@/lib/supabase-browser";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 

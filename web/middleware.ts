@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
-import { isAuthConfigured, middlewareClient } from "@/lib/supabase";
+import { isAuthConfigured } from "@/lib/supabase";
+import { middlewareClient } from "@/lib/supabase-server";
 
 // Paths that never require auth.
 const PUBLIC_PREFIXES = [

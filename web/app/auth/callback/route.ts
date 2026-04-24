@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { serverClient } from "@/lib/supabase";
+import { serverClient } from "@/lib/supabase-server";
 
 /**
  * Magic-link callback. Supabase redirects here with a `code` query param;

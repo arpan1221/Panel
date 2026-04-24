@@ -45,6 +45,16 @@ npm-debug.log*
 # Supabase local
 supabase/.temp/
 
+# Claude Code / plugin auto-installs (per-machine tooling, not product code).
+# Keep our intentional meta-agents at .claude/agents/{spec-keeper,schema-guard,demo-auditor}.md
+# but ignore everything else auto-installed in .claude/ and all of .agents/.
+/.agents/
+/.planning/
+/skills-lock.json
+/.claude/*
+!/.claude/agents/
+/.claude/agents/gsd-*
+
 # Allow examples to keep their data, but not agent-generated plots dropped there
 !examples/**/data/
 examples/*/data/*.png

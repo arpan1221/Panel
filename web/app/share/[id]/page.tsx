@@ -1,6 +1,7 @@
 import { notFound } from "next/navigation";
 import { getExperiment } from "@/lib/backend";
-import { bundleEvents, KnowledgePanel, StepCard } from "@/components/jury";
+import { bundleEvents } from "@/lib/jury-bundle";
+import { KnowledgePanel, StepCard } from "@/components/jury";
 
 export const dynamic = "force-dynamic";
 

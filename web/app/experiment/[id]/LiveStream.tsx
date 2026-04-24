@@ -5,7 +5,8 @@ import {
   DeliberationEvent,
   KnowledgeEntry,
 } from "@/lib/backend";
-import { bundleEvents, KnowledgePanel, StepCard } from "@/components/jury";
+import { bundleEvents } from "@/lib/jury-bundle";
+import { KnowledgePanel, StepCard } from "@/components/jury";
 import { useEffect, useMemo, useRef, useState } from "react";
 
 type Status = "running" | "complete" | "failed" | "unknown";

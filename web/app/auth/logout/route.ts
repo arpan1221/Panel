@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
-import { serverClient, isAuthConfigured } from "@/lib/supabase";
+import { isAuthConfigured } from "@/lib/supabase";
+import { serverClient } from "@/lib/supabase-server";
 
 export async function POST(req: NextRequest) {
   if (isAuthConfigured()) {
