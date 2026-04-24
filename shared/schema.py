@@ -30,6 +30,7 @@ class EventType(str, Enum):
     INTERPRETATION = "interpretation"  # interpreter's reading of output
     TAG = "tag"                     # tagger's semantic tagging
     KNOWLEDGE = "knowledge"         # archivist committed a knowledge entry
+    KNOWLEDGE_RETRIEVAL = "knowledge_retrieval"  # KB queried, top-K entries injected
     ERROR = "error"                 # something went wrong (kept for audit)
 
 

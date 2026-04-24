@@ -29,6 +29,7 @@ from nbclient import NotebookClient
 from agent.events import EventStream, parse_alternatives, parse_tags
 from agent.llm import call_role
 from agent.parsing import parse_json_object
+from agent.retrieval import RetrievedEntry, format_for_prompt, retrieve
 from shared.schema import AgentRole, EventType, KnowledgeEntry
 
 load_dotenv()
@@ -104,11 +105,13 @@ def call_implementer(
     step: int,
     max_steps: int,
     knowledge_refs: list[KnowledgeEntry],
+    retrieved_priors: list[RetrievedEntry] | None = None,
 ) -> dict:
-    kb_lines = [
+    own_kb_lines = [
         f"- [{k.kind}] {k.claim} (confidence {k.confidence:.2f})"
         for k in knowledge_refs
-    ] or ["(none yet)"]
+    ] or ["(none yet — this experiment hasn't committed knowledge)"]
+    priors_block = format_for_prompt(retrieved_priors or [])
     user_msg = "\n\n".join(
         [
             f"# Experiment goal\n{goal}",
@@ -117,7 +120,8 @@ def call_implementer(
             f"# Deliberation so far (recent)\n{summarize_events(events)}",
             f"# Last cell output\n{last_output or '(nothing yet — step 1)'}",
             f"# Last error\n{last_error or '(no error)'}",
-            f"# Relevant knowledge base entries\n" + "\n".join(kb_lines),
+            f"# Knowledge committed in THIS experiment\n" + "\n".join(own_kb_lines),
+            f"# Knowledge retrieved from PRIOR experiments\n{priors_block}",
             "Return ONE JSON object matching the schema in your system prompt. "
             "No prose before or after. Do not wrap in markdown fences.",
         ]
@@ -261,6 +265,39 @@ def run_jury(
         last_error: str | None = None
         nb_path = out_abs / "notebook.ipynb"
 
+        # ===== KNOWLEDGE RETRIEVAL (cross-experiment, one-shot at run start) =====
+        runs_root = out_abs.parent
+        try:
+            retrieved_priors = retrieve(
+                query=f"{goal}\n\n{dataset_desc[:2000]}",
+                runs_root=runs_root,
+                exclude_run_id=exp_id,
+                top_k=3,
+            )
+        except Exception as exc:
+            print(f"[retrieval] failed: {exc}", file=sys.stderr)
+            retrieved_priors = []
+        if retrieved_priors:
+            stream.emit(
+                agent=AgentRole.ARCHIVIST,
+                event_type=EventType.KNOWLEDGE_RETRIEVAL,
+                step_number=0,
+                summary=(
+                    f"Surfaced {len(retrieved_priors)} prior knowledge "
+                    f"entr{'y' if len(retrieved_priors) == 1 else 'ies'} from past experiments"
+                ),
+                body=format_for_prompt(retrieved_priors),
+                evidence=[r.entry.knowledge_id for r in retrieved_priors],
+                confidence=max(r.score for r in retrieved_priors),
+            )
+            print(
+                f"[retrieval] surfaced {len(retrieved_priors)} entr"
+                f"{'y' if len(retrieved_priors) == 1 else 'ies'} "
+                f"(top score {retrieved_priors[0].score:.2f})"
+            )
+        else:
+            print("[retrieval] knowledge base empty or no matches above floor")
+
         totals = {"in": 0, "out": 0, "cost_usd": 0.0, "calls": 0}
 
         def charge(call_dict):
@@ -290,6 +327,7 @@ def run_jury(
                         step,
                         max_steps,
                         knowledge,
+                        retrieved_priors=retrieved_priors,
                     )
                 except ValueError as e:
                     stream.emit(
