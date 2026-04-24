@@ -7,10 +7,11 @@ export const dynamic = "force-dynamic";
 export default function LoginPage({
   searchParams,
 }: {
-  searchParams: { next?: string };
+  searchParams: { next?: string; error?: string };
 }) {
   const configured = isAuthConfigured();
   const next = searchParams.next ?? "/";
+  const error = searchParams.error;
 
   return (
     <main className="mx-auto flex min-h-screen max-w-md flex-col justify-center px-6 py-12">
@@ -24,6 +25,12 @@ export default function LoginPage({
             ? "Enter your email. We'll send you a magic link — no password."
             : "Auth isn't configured yet. The app is running open; any email lets you in."}
         </p>
+
+        {error ? (
+          <div className="mt-4 rounded border border-rose-500/30 bg-rose-500/5 p-3 text-xs text-rose-300">
+            {error}
+          </div>
+        ) : null}
 
         <div className="mt-6">
           <LoginForm configured={configured} next={next} />
