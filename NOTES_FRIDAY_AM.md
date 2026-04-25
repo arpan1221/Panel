@@ -64,7 +64,6 @@ Write the Interpreter prompt's examples with exactly this case in mind.
 
 ## What NOT to do today
 
-- Don't touch the PhD flex (Saturday).
 - Don't polish the web UI beyond "streams events in order" (Saturday).
 - Don't stand up Supabase auth (magic-link is a Saturday afternoon job).
 - Don't try Opus 4.7 in the jury. Sonnet everywhere for now; swap to Opus only for Implementer hard-planning steps and only after the jury is stable.

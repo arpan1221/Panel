@@ -21,7 +21,6 @@ Nothing else ships tonight. No web UI. No VS Code extension. No jury. No auth. J
 - Any web code. Any backend code. Any extension code.
 - Supabase setup.
 - Prompt optimization beyond "it produces something coherent."
-- PhD flex.
 - Branching / alternatives-considered wiring.
 - Tests.
 

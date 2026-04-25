@@ -17,7 +17,7 @@ Concretely, by end of Friday, I can:
 2. Watch the four-agent jury run, streamed event-by-event to a web page
 3. Reload the page and see the full deliberation from `deliberation.jsonl`
 
-No auth. No share page. No PhD flex. No extension polish.
+No auth. No share page. No extension polish.
 
 ## In scope (ordered)
 
@@ -51,7 +51,6 @@ No auth. No share page. No PhD flex. No extension polish.
 
 ## Out of scope (spec-keeper enforces)
 
-- PhD flex / discriminator experiment — Saturday.
 - Share page / public URL — Saturday.
 - Supabase magic-link auth — Saturday afternoon.
 - VS Code extension — Saturday, unless Friday finishes early.

@@ -73,21 +73,15 @@ panel/
     │   ├── data/train.csv
     │   ├── goal.txt
     │   └── expected_deliberation.jsonl   # Reference for QA
-    ├── house_prices/
-    │   ├── data/train.csv
-    │   ├── goal.txt
-    │   └── expected_deliberation.jsonl
-    └── discriminator_phd_flex/
-        ├── data/                         # Sanitized slice, git-lfs or local-only
-        ├── goal.txt                      # "Detect population shift between CPS and HPS"
-        ├── scripted_path.md              # If agent goes off-script, use this to narrate
+    └── house_prices/
+        ├── data/train.csv
+        ├── goal.txt
         └── expected_deliberation.jsonl
 ```
 
 ## What goes in `/examples` vs what stays local
 
 - `/examples/titanic/` and `/examples/house_prices/` — public Kaggle data, commit directly.
-- `/examples/discriminator_phd_flex/data/` — sanitized sliver of PhD data. Depending on what's shareable, either (a) commit a tiny anonymized version, or (b) gitignore and point the README at a download script.
 
 ## Which directories are "hot" on which day
 
@@ -97,7 +91,7 @@ panel/
 
 - **Friday evening:** `/extension/`. Minimum viable — authenticates to backend, receives "start experiment X" commands, spawns `agent.run_experiment` as a subprocess.
 
-- **Saturday:** `/backend/share_render.py` + `/examples/discriminator_phd_flex/`. Static share page, PhD flex.
+- **Saturday:** `/backend/share_render.py`. Static share page, demo polish.
 
 - **Sunday:** reserve. Only touch whatever is broken.
 

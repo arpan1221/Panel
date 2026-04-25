@@ -171,7 +171,7 @@ Every one of those findings is captured as a structured event, rendered inline i
 /backend     — FastAPI app: POST /experiments, GET /events/{id} SSE, GET /experiments/{id}
 /web         — Next.js 14 App Router + Tailwind, live-streaming dashboard
 /extension   — VS Code extension (TypeScript)
-/examples    — Datasets: titanic, house_prices, discriminator (PhD flex)
+/examples    — Datasets: titanic, house_prices
 ```
 
 ## License
