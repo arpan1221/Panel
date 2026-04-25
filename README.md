@@ -1,6 +1,8 @@
 # Panel
 
-**An agentic workspace for data science experiments.** Four specialist agents — an Implementer, an Interpreter, a Tagger, and an Archivist — run your experiment together, argue over it, and leave behind a shareable artifact that explains not just *what* happened, but *why*.
+**A panel of four specialist agents reviewing your data-science experiment in real time.** An Implementer writes the cells. An Interpreter reads the output and flags what's wrong with it. A Tagger classifies every step. An Archivist decides what's worth remembering. The reasoning is the artifact — exported as a URL anyone can open.
+
+Built for the everyday tabular / classical-ML experiments that don't justify a fine-tune: profile a CSV, test a hypothesis, train a model, share what you found.
 
 <p align="center">
   <em>Type a goal. Watch the jury work. Get a URL you can share.</em>
@@ -10,7 +12,7 @@
 
 ## The problem
 
-Data scientists run hundreds of experiments. Each one dies in a notebook graveyard — the code survives but the *reasoning* evaporates. Copilot writes cells; W&B and MLflow track metrics. None of them capture the deliberation: the hypothesis being tested, the alternatives considered, the pitfall that was spotted and avoided.
+Data scientists run hundreds of experiments. Each one dies in a notebook graveyard — the code survives but the *reasoning* evaporates. Copilot writes cells; W&B and MLflow track metrics; autonomous coding agents write working code. None of them capture the deliberation: the hypothesis being tested, the alternatives considered, the pitfall that was spotted and avoided, the methodological hole that should have been called out before the result was trusted.
 
 When you open an old notebook three weeks later, you've forgotten why you pivoted from logistic regression to random forest. When you try to share your work, you paste a gist and hope.
 
@@ -27,9 +29,9 @@ Every action is appended to `deliberation.jsonl` as a structured `DeliberationEv
 
 ## Panel IS
 
+- A four-agent jury that captures expert-level methodological review as part of the run
 - A web workspace where experiments live as first-class shareable artifacts
 - A live dashboard showing the agentic loop: plan → code → execute → interpret → tag → commit
-- A four-agent jury that captures expert-level methodological review as part of the run
 - A semantic-tag timeline that makes experimental reasoning navigable after the fact
 - A public-URL share target for finished experiments
 - A VS Code extension so you can launch a run from your editor without leaving your workflow
@@ -37,6 +39,8 @@ Every action is appended to `deliberation.jsonl` as a structured `DeliberationEv
 ## Panel is NOT
 
 - A Copilot competitor — Copilot writes cells; Panel captures the reasoning *around* cells
+- An LLM post-training agent — Panel runs on your CSVs, not on the Hugging Face Hub. If you need SFT/DPO on a base model, use a tool built for that
+- An autonomous "do my whole project" agent — Panel runs one experiment at a time, with the reasoning explicit, so a human can audit it
 - A metrics tracker — use W&B/MLflow for that (integration possible later)
 - A custom notebook format — standard `.ipynb` plus a `deliberation.jsonl` sidecar
 - A team-collaboration tool — solo-researcher workspace for now
