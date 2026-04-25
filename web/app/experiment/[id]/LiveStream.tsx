@@ -7,6 +7,7 @@ import {
 } from "@/lib/backend";
 import { bundleEvents } from "@/lib/jury-bundle";
 import { KnowledgePanel, StepCard } from "@/components/jury";
+import { ColabHandoff } from "@/components/colab-handoff";
 import { useEffect, useMemo, useRef, useState } from "react";
 
 type Status = "running" | "complete" | "failed" | "unknown";
@@ -103,7 +104,10 @@ function OrchestrationBanner({
           <span className="text-neutral-200">{knowledge.length}</span>{" "}
           knowledge
         </span>
-        <div className="ml-auto flex items-center gap-2">
+        <div className="ml-auto flex flex-wrap items-center gap-2">
+          {status === "complete" || status === "failed" ? (
+            <ColabHandoff experimentId={experimentId} variant="compact" />
+          ) : null}
           <button
             onClick={copyShareUrl}
             className="rounded border border-neutral-700 bg-neutral-900 px-3 py-1 text-xs text-neutral-300 hover:border-neutral-500 hover:bg-neutral-800"

@@ -2,6 +2,7 @@ import { notFound } from "next/navigation";
 import { getExperiment } from "@/lib/backend";
 import { bundleEvents } from "@/lib/jury-bundle";
 import { KnowledgePanel, StepCard } from "@/components/jury";
+import { ColabHandoff } from "@/components/colab-handoff";
 
 export const dynamic = "force-dynamic";
 
@@ -138,6 +139,10 @@ export default async function SharePage({
           </div>
         ) : null}
       </header>
+
+      <div className="mt-6">
+        <ColabHandoff experimentId={data.experiment_id} />
+      </div>
 
       <div className="mt-8">
         <KnowledgePanel knowledge={knowledge} />

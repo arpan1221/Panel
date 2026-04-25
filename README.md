@@ -33,8 +33,7 @@ Every action is appended to `deliberation.jsonl` as a structured `DeliberationEv
 - A web workspace where experiments live as first-class shareable artifacts
 - A live dashboard showing the agentic loop: plan → code → execute → interpret → tag → commit
 - A semantic-tag timeline that makes experimental reasoning navigable after the fact
-- A public-URL share target for finished experiments
-- A VS Code extension so you can launch a run from your editor without leaving your workflow
+- A public-URL share target for finished experiments — **with one-click "Open in Colab"** so anyone can fork the notebook and continue from where the jury left off
 
 ## Panel is NOT
 
@@ -146,11 +145,18 @@ docker compose run --rm agent python -m agent.loop_v1 \
   --max-steps 8
 ```
 
-### From VS Code
+### Continue in Colab
 
-Install the Panel extension (source under `/extension`). Use the command palette:
+Every share page exposes a portable copy of the run's notebook:
 
-- `Panel: Run Experiment` — prompts for goal + dataset, launches via backend, opens the live view in your browser.
+- **Open in Colab** — opens the notebook directly in Google Colab (requires the backend to be on a public URL).
+- **Download .ipynb** — always works; drag the file onto [colab.research.google.com](https://colab.research.google.com/) for a local-friendly path.
+
+The portable notebook prepends two setup cells: one installs the data-science stack, the other re-materializes the dataset under the same path the jury used — so the rest of the cells run unchanged. Pick up at the next cell; iterate from there.
+
+### Optional VS Code launcher
+
+There's an experimental VS Code extension under `/extension` that adds a status-bar button to launch a run via the backend. It's a launcher, not a workflow surface — the deliberation still lives in the browser. Install only if a status-bar shortcut is useful to you.
 
 ---
 
