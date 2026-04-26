@@ -154,6 +154,7 @@ async def _save_one_upload(file: UploadFile) -> dict:
     suffix = Path(raw).suffix.lower() or ".csv"
     if suffix not in ALLOWED_DATASET_SUFFIXES:
         raise HTTPException(status_code=400, detail=f"unsupported file type: {suffix}")
+    UPLOADS_DIR.mkdir(parents=True, exist_ok=True)
     safe_name = f"{uuid.uuid4().hex[:10]}{suffix}"
     out_path = UPLOADS_DIR / safe_name
     size = 0
