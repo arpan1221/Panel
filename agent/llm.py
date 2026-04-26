@@ -15,7 +15,7 @@ from anthropic import Anthropic
 Role = Literal["implementer", "interpreter", "tagger", "archivist"]
 
 MODEL_FOR_ROLE: dict[Role, str] = {
-    "implementer": "claude-sonnet-4-6",
+    "implementer": "claude-opus-4-7",
     "interpreter": "claude-sonnet-4-6",
     "tagger": "claude-haiku-4-5-20251001",
     "archivist": "claude-sonnet-4-6",
