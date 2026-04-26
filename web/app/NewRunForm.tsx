@@ -40,7 +40,7 @@ const PRESETS: {
     label: "Discriminator overfit",
     goal: "Train a discriminator to separate two survey samples (CPS vs HPS). Find any features that look like they're cheating — survey-ID columns, geography codes, anything that wouldn't generalise. Report which features are leaking.",
     dataset: "examples/discriminator/data/train.csv",
-    tag: "phd flex",
+    tag: "leakage hunt",
     tint: "var(--peach)",
     est: "~3m · ~$0.50",
   },
