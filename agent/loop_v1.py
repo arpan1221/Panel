@@ -57,6 +57,15 @@ def describe_dataset(dataset_path: Path) -> str:
     )
 
 
+def describe_datasets(paths: list[Path]) -> str:
+    if len(paths) == 1:
+        return describe_dataset(paths[0])
+    blocks = [f"# {len(paths)} datasets provided — agent decides how to combine them.\n"]
+    for i, p in enumerate(paths, 1):
+        blocks.append(f"## dataset[{i}] — {p.name}\n{describe_dataset(p)}")
+    return "\n\n".join(blocks)
+
+
 _ANSI_RE = re.compile(r"\x1b\[[0-9;]*m")
 
 
@@ -230,7 +239,7 @@ def call_archivist(
 
 def run_jury(
     goal: str,
-    dataset_path: Path,
+    dataset_path: Path | list[Path],
     out_dir: Path,
     max_steps: int = 8,
     experiment_id: str | None = None,
@@ -244,8 +253,10 @@ def run_jury(
     tagger_prompt = load_prompt("tagger")
     archivist_prompt = load_prompt("archivist")
 
-    dataset_abs = dataset_path.resolve()
-    dataset_desc = describe_dataset(dataset_abs)
+    paths_list = dataset_path if isinstance(dataset_path, list) else [dataset_path]
+    paths_abs = [p.resolve() for p in paths_list]
+    dataset_abs = paths_abs[0]
+    dataset_desc = describe_datasets(paths_abs)
     out_abs = out_dir.resolve()
 
     # Run the kernel from inside the run dir so plots land here, not in repo root.
@@ -601,11 +612,13 @@ def main() -> int:
         return 2
 
     # Resolve paths relative to CWD at invocation (before we chdir into out_dir).
-    dataset = Path(args.dataset).resolve()
+    # `--dataset` may be a single path or a comma-separated list.
+    dataset_items = [s.strip() for s in args.dataset.split(",") if s.strip()]
+    datasets = [Path(s).resolve() for s in dataset_items]
     out_dir = Path(args.out).resolve()
     return run_jury(
         goal=args.goal,
-        dataset_path=dataset,
+        dataset_path=datasets if len(datasets) > 1 else datasets[0],
         out_dir=out_dir,
         max_steps=args.max_steps,
         experiment_id=args.experiment_id,

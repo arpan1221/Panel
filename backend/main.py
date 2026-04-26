@@ -146,34 +146,46 @@ UPLOADS_DIR = RUNS_DIR / "_uploads"
 UPLOADS_DIR.mkdir(parents=True, exist_ok=True)
 
 
-@app.post("/uploads")
-async def upload_dataset(file: UploadFile = File(...)) -> dict:
-    """Save a user-uploaded CSV under runs/_uploads/<uuid>.csv and return its path.
+ALLOWED_DATASET_SUFFIXES = {".csv", ".tsv", ".parquet", ".xlsx", ".xls", ".json"}
 
-    The returned `dataset` field is what the New Run form should POST to /experiments.
-    """
+
+async def _save_one_upload(file: UploadFile) -> dict:
     raw = file.filename or "dataset.csv"
     suffix = Path(raw).suffix.lower() or ".csv"
-    if suffix not in {".csv", ".tsv", ".parquet", ".xlsx", ".xls", ".json"}:
+    if suffix not in ALLOWED_DATASET_SUFFIXES:
         raise HTTPException(status_code=400, detail=f"unsupported file type: {suffix}")
     safe_name = f"{uuid.uuid4().hex[:10]}{suffix}"
     out_path = UPLOADS_DIR / safe_name
     size = 0
     with out_path.open("wb") as fh:
         while True:
-            chunk = await file.read(1 << 20)  # 1 MiB
+            chunk = await file.read(1 << 20)
             if not chunk:
                 break
             size += len(chunk)
-            if size > 200 * 1024 * 1024:  # 200 MiB cap
+            if size > 200 * 1024 * 1024:
                 fh.close()
                 out_path.unlink(missing_ok=True)
                 raise HTTPException(status_code=413, detail="file too large (>200 MiB)")
             fh.write(chunk)
+    return {"path": str(out_path), "filename": raw, "size_bytes": size}
+
+
+@app.post("/uploads")
+async def upload_dataset(files: list[UploadFile] = File(...)) -> dict:
+    """Save one or more uploaded datasets under runs/_uploads/.
+
+    Returns `dataset` as a comma-separated list of container paths — the New Run
+    form posts that string straight to POST /experiments. Multi-dataset runs let
+    the agent decide how to combine them.
+    """
+    if not files:
+        raise HTTPException(status_code=400, detail="no files uploaded")
+    saved = [await _save_one_upload(f) for f in files]
     return {
-        "dataset": str(out_path),
-        "filename": raw,
-        "size_bytes": size,
+        "dataset": ",".join(s["path"] for s in saved),
+        "filenames": [s["filename"] for s in saved],
+        "files": saved,
     }
 
 

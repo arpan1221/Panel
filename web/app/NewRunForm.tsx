@@ -55,21 +55,25 @@ export default function NewRunForm() {
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
-  const [uploaded, setUploaded] = useState<string | null>(null);
+  const [uploadedNames, setUploadedNames] = useState<string[]>([]);
+  const [datasetUrl, setDatasetUrl] = useState("");
+  const [presetLabel, setPresetLabel] = useState<string | null>(PRESETS[1].label);
 
-  async function handleFile(e: React.ChangeEvent<HTMLInputElement>) {
-    const file = e.target.files?.[0];
-    if (!file) return;
+  async function handleFiles(e: React.ChangeEvent<HTMLInputElement>) {
+    const files = Array.from(e.target.files ?? []);
+    if (files.length === 0) return;
     setUploading(true);
     setError(null);
     try {
       const fd = new FormData();
-      fd.append("file", file);
+      for (const f of files) fd.append("files", f);
       const res = await fetch(`${BROWSER_BACKEND}/uploads`, { method: "POST", body: fd });
       if (!res.ok) throw new Error(`upload failed: HTTP ${res.status}`);
-      const data = (await res.json()) as { dataset: string; filename: string };
+      const data = (await res.json()) as { dataset: string; filenames: string[] };
       setDataset(data.dataset);
-      setUploaded(data.filename);
+      setUploadedNames(data.filenames);
+      setDatasetUrl("");
+      setPresetLabel(null);
     } catch (err) {
       setError(String(err));
     } finally {
@@ -77,10 +81,22 @@ export default function NewRunForm() {
     }
   }
 
+  function handleUrlChange(v: string) {
+    setDatasetUrl(v);
+    if (v.trim()) {
+      setDataset(v.trim());
+      setUploadedNames([]);
+      setPresetLabel(null);
+    }
+  }
+
   function applyPreset(i: number) {
     setSelected(i);
     setGoal(PRESETS[i].goal);
     setDataset(PRESETS[i].dataset);
+    setPresetLabel(PRESETS[i].label);
+    setUploadedNames([]);
+    setDatasetUrl("");
   }
 
   async function submit(e: React.FormEvent) {
@@ -193,35 +209,40 @@ export default function NewRunForm() {
           gap: 16,
         }}
       >
-        <label>
+        <div>
           <div className="eyebrow" style={{ marginBottom: 8 }}>
-            📁 dataset · path or https URL
+            📁 dataset · upload file(s) or paste a URL
           </div>
-          <input
-            value={dataset}
-            onChange={(e) => setDataset(e.target.value)}
-            className="input-fun"
-            placeholder="examples/titanic/data/train.csv  or  https://…/train.csv"
-          />
-          <div style={{ marginTop: 8, display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
+          <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
             <input
               type="file"
               accept=".csv,.tsv,.parquet,.xlsx,.xls,.json"
-              onChange={handleFile}
+              multiple
+              onChange={handleFiles}
               disabled={uploading}
               style={{ fontSize: 12 }}
             />
-            {uploading ? (
-              <span className="mono" style={{ fontSize: 11, color: "var(--ink-3)" }}>uploading…</span>
-            ) : uploaded ? (
-              <span className="mono" style={{ fontSize: 11, color: "var(--ink-3)" }}>✓ {uploaded}</span>
-            ) : (
-              <span className="mono" style={{ fontSize: 11, color: "var(--ink-3)" }}>
-                or upload a CSV from your machine
-              </span>
-            )}
+            <input
+              type="url"
+              value={datasetUrl}
+              onChange={(e) => handleUrlChange(e.target.value)}
+              className="input-fun"
+              placeholder="…or paste an https URL to a raw CSV"
+              style={{ fontSize: 12 }}
+            />
+            <div className="mono" style={{ fontSize: 11, color: "var(--ink-3)" }}>
+              {uploading
+                ? "uploading…"
+                : uploadedNames.length > 0
+                ? `✓ ${uploadedNames.length} file${uploadedNames.length > 1 ? "s" : ""}: ${uploadedNames.join(", ")}`
+                : datasetUrl
+                ? `✓ url: ${datasetUrl}`
+                : presetLabel
+                ? `✓ preset: ${presetLabel}`
+                : "pick a preset above, upload files, or paste a URL"}
+            </div>
           </div>
-        </label>
+        </div>
         <label>
           <div className="eyebrow" style={{ marginBottom: 8 }}>
             🔁 max steps
