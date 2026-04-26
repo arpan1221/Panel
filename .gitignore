@@ -38,6 +38,9 @@ extension/*.vsix
 .DS_Store
 Thumbs.db
 
+# Claude Design handoff bundle (scratch, not part of project)
+/panel/
+
 # Logs
 *.log
 npm-debug.log*
