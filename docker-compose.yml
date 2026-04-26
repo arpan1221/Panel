@@ -44,6 +44,10 @@ services:
     env_file: .env
     environment:
       - PANEL_BACKEND=http://backend:8000
+      # Browser talks directly to the backend so SSE is not buffered by the
+      # Next dev-mode proxy. CORS is open server-side. For tunneled HTTPS
+      # demos, drop this var and the same-origin /api/backend/* rewrite kicks
+      # back in (with the dev-mode SSE caveat).
       - NEXT_PUBLIC_BACKEND_BROWSER=http://localhost:8100
       - NODE_ENV=development
     ports:
