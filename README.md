@@ -66,7 +66,7 @@ Every action is appended to `deliberation.jsonl` as a structured `DeliberationEv
   User's goal + dataset
 ```
 
-**Model routing.** Implementer, Interpreter, and Archivist run on **Claude Sonnet 4.6**. Tagger runs on **Claude Haiku 4.5** because tagging is classification, not reasoning — it's cheap on purpose. Hard planning steps can opt into **Opus 4.7**.
+**Model routing.** The Implementer runs on **Claude Opus 4.7** because writing the next cell is the hardest step — it requires planning, code generation, and self-critique under structured-output constraints. The Interpreter and Archivist run on **Claude Sonnet 4.6**. The Tagger runs on **Claude Haiku 4.5** because tagging is classification, not reasoning — it's cheap on purpose. Tiered routing keeps an 8-step run in the $1.50–$3 range instead of the $6+ an all-Opus jury would cost.
 
 **Privacy.** The dev stack runs entirely on localhost via Docker Compose. Datasets stay on your machine. The agent runtime executes notebook cells in a sandboxed Jupyter kernel and writes artifacts to a volume-mounted run directory.
 
@@ -128,7 +128,7 @@ docker compose up -d
 
 Then:
 - Open **http://localhost:3100** in a browser
-- Pick a preset (Titanic quick profile · Titanic full jury · House-prices regression) or type your own goal
+- Pick a preset (Titanic quick profile · Titanic full jury · House-prices regression), upload one or more CSVs, or paste a direct CSV URL
 - Click **Run experiment**
 - Watch the four agents work live
 
@@ -154,7 +154,7 @@ Install the Panel extension (source under `/extension`). Use the command palette
 
 A real run on the King County housing dataset, launched with the goal *"Predict house sale price, cross-validate, tell me which features matter."*
 
-- **8 steps, 47 events, 7 knowledge commits.** Finished in ~8 minutes for ~$0.50 in API calls.
+- **8 steps, 47 events, 7 knowledge commits.** Finished in ~8 minutes for ~$2 in API calls.
 - The Interpreter caught `house_age = -1` (properties sold before recorded build year), `sqft_living / sqft_above / sqft_basement` collinearity-by-construction, and an RMSE printing as `~$0` because of a wrong `expm1` transform — a bug in the Implementer's own code.
 - On step 4 the Implementer built a KMeans geo-cluster feature. The Interpreter flagged **transductive leakage** (KMeans fit on full data before CV splits). On step 5 the Implementer fixed it with a custom sklearn transformer that fits KMeans inside each CV fold. The Archivist committed both the pitfall and the before/after delta as knowledge (+0.0049 R² leak-free vs +0.0087 inflated).
 - Final step surfaced a pipeline-permutation gotcha: permuting `lat` also corrupts `geo_cluster` because `geo_cluster` is *derived from* `lat` — a subtle bug that 90% of senior DS would miss in a first pass.
@@ -171,7 +171,7 @@ Every one of those findings is captured as a structured event, rendered inline i
 /backend     — FastAPI app: POST /experiments, GET /events/{id} SSE, GET /experiments/{id}
 /web         — Next.js 14 App Router + Tailwind, live-streaming dashboard
 /extension   — VS Code extension (TypeScript)
-/examples    — Datasets: titanic, house_prices, discriminator (PhD flex)
+/examples    — Bundled datasets: titanic, house_prices
 ```
 
 ## License
