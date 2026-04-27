@@ -421,11 +421,95 @@ def run_jury(
                 last_output = "\n\n".join(exec_parts).strip() or "(no code cells)"
                 last_error = step_error
 
+                # ===== IN-STEP RETRY =====
+                # If the cell errored, give the Implementer up to MAX_RETRIES
+                # chances to rewrite it before the rest of the jury reads the
+                # output. Keeps the demo narrative clean; the failed cell stays
+                # in the notebook for honesty.
+                MAX_RETRIES = 2
+                retry_attempt = 0
+                while step_error and retry_attempt < MAX_RETRIES:
+                    retry_attempt += 1
+                    try:
+                        impl_retry = call_implementer(
+                            impl_prompt,
+                            goal,
+                            dataset_desc,
+                            stream.events,
+                            last_output,
+                            last_error,
+                            step,
+                            max_steps,
+                            knowledge,
+                            retrieved_priors=retrieved_priors,
+                        )
+                    except ValueError:
+                        break
+                    charge(impl_retry["_llm"])
+
+                    retry_cells = impl_retry.get("cells") or []
+                    retry_new = []
+                    for c in retry_cells:
+                        src = c.get("source", "")
+                        if c.get("cell_type") == "markdown":
+                            nc = nbformat.v4.new_markdown_cell(src)
+                        else:
+                            nc = nbformat.v4.new_code_cell(src)
+                        notebook.cells.append(nc)
+                        retry_new.append(nc)
+
+                    retry_code_sources = [
+                        c.get("source", "")
+                        for c in retry_cells
+                        if c.get("cell_type") == "code"
+                    ]
+                    retry_code_body = "\n\n# --- next cell ---\n\n".join(retry_code_sources)
+                    retry_code_evt = stream.emit(
+                        agent=AgentRole.IMPLEMENTER,
+                        event_type=EventType.CODE,
+                        step_number=step,
+                        summary=f"retry {retry_attempt}: rewrote {len(retry_cells)} cell(s) after {last_error.split(':')[0] if last_error else 'error'}"[:200],
+                        body=retry_code_body,
+                        cell_ref=f"cells[{len(notebook.cells) - len(retry_cells)}:{len(notebook.cells)}]",
+                        confidence=float(impl_retry.get("confidence") or 0.5),
+                    )
+
+                    step_error = None
+                    retry_parts: list[str] = []
+                    for nc in retry_new:
+                        if nc.cell_type != "code":
+                            continue
+                        try:
+                            nbc.execute_cell(nc, len(notebook.cells) - 1)
+                        except Exception as exc:
+                            step_error = f"{type(exc).__name__}: {exc}"
+                        retry_parts.append(cell_output_text(nc))
+                        if any(o.get("output_type") == "error" for o in nc.get("outputs", [])):
+                            err = next(
+                                o for o in nc["outputs"] if o.get("output_type") == "error"
+                            )
+                            step_error = f"{err.get('ename')}: {err.get('evalue')}"
+
+                    last_output = "\n\n".join(retry_parts).strip() or "(no code cells)"
+                    last_error = step_error
+                    # Promote the retry as the canonical code event for downstream jury.
+                    code_evt = retry_code_evt
+                    code_sources = retry_code_sources
+                    impl = impl_retry
+
                 output_evt = stream.emit(
                     agent=AgentRole.IMPLEMENTER,
                     event_type=EventType.OUTPUT,
                     step_number=step,
-                    summary=(f"error: {step_error}" if step_error else "cell(s) executed")[:200],
+                    summary=(
+                        f"error after {retry_attempt} retries: {step_error}"
+                        if step_error
+                        else (
+                            f"recovered after {retry_attempt} retr{'y' if retry_attempt == 1 else 'ies'}"
+                            if retry_attempt > 0
+                            else "cell(s) executed"
+                        )
+                    )[:200],
                     body=last_output,
                     evidence=[code_evt.event_id],
                     confidence=0.0 if step_error else 1.0,
