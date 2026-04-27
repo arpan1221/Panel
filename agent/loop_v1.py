@@ -157,7 +157,7 @@ def call_interpreter(
             "Return ONE JSON object per your schema. No prose, no fences.",
         ]
     )
-    call = call_role("interpreter", system_prompt, user_msg, max_tokens=1200)
+    call = call_role("interpreter", system_prompt, user_msg, max_tokens=2400)
     data = parse_json_object(call.text)
     data["_llm"] = call.__dict__
     return data

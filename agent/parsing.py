@@ -10,6 +10,7 @@ import json
 import re
 
 _FENCE_RE = re.compile(r"```(?:json)?\s*(.*?)\s*```", re.DOTALL)
+_OPEN_FENCE_RE = re.compile(r"^```(?:json)?\s*", re.IGNORECASE)
 
 
 def parse_json_object(text: str) -> dict:
@@ -17,6 +18,10 @@ def parse_json_object(text: str) -> dict:
     m = _FENCE_RE.search(text)
     if m:
         text = m.group(1).strip()
+    else:
+        # Tolerate truncated responses that opened a ```json fence but never
+        # closed it (output cap hit mid-stream).
+        text = _OPEN_FENCE_RE.sub("", text).strip()
     start = text.find("{")
     end = text.rfind("}")
     if start == -1 or end == -1:
