@@ -135,7 +135,7 @@ def call_implementer(
             "No prose before or after. Do not wrap in markdown fences.",
         ]
     )
-    call = call_role("implementer", system_prompt, user_msg, max_tokens=3000)
+    call = call_role("implementer", system_prompt, user_msg, max_tokens=6000)
     data = parse_json_object(call.text)
     data["_llm"] = call.__dict__
     return data
@@ -327,26 +327,33 @@ def run_jury(
         with nbc.setup_kernel():
             for step in range(max_steps):
                 # ===== IMPLEMENTER =====
-                try:
-                    impl = call_implementer(
-                        impl_prompt,
-                        goal,
-                        dataset_desc,
-                        stream.events,
-                        last_output,
-                        last_error,
-                        step,
-                        max_steps,
-                        knowledge,
-                        retrieved_priors=retrieved_priors,
-                    )
-                except ValueError as e:
+                impl = None
+                last_parse_err: Exception | None = None
+                for attempt in range(2):
+                    try:
+                        impl = call_implementer(
+                            impl_prompt,
+                            goal,
+                            dataset_desc,
+                            stream.events,
+                            last_output,
+                            last_error,
+                            step,
+                            max_steps,
+                            knowledge,
+                            retrieved_priors=retrieved_priors,
+                        )
+                        break
+                    except ValueError as e:
+                        last_parse_err = e
+                        print(f"[step {step+1}] implementer parse failed (attempt {attempt+1}/2): {e}")
+                if impl is None:
                     stream.emit(
                         agent=AgentRole.IMPLEMENTER,
                         event_type=EventType.ERROR,
                         step_number=step,
                         summary=f"implementer parse failed",
-                        body=str(e),
+                        body=str(last_parse_err),
                         confidence=0.0,
                     )
                     break
