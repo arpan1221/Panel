@@ -8,6 +8,7 @@ export type StepBundle = {
   interpretation: DeliberationEvent | null;
   tag: DeliberationEvent | null;
   knowledge: DeliberationEvent | null;
+  knowledge_retrieval: DeliberationEvent | null;
   error: DeliberationEvent | null;
   allTags: string[];
 };
@@ -15,26 +16,28 @@ export type StepBundle = {
 export function bundleEvents(events: DeliberationEvent[]): StepBundle[] {
   const byStep = new Map<number, StepBundle>();
   for (const e of events) {
-    let b = byStep.get(e.step_number);
+    const step = typeof e.step_number === "number" ? e.step_number : 0;
+    let b = byStep.get(step);
     if (!b) {
       b = {
-        step: e.step_number,
+        step,
         plan: null,
         code: null,
         output: null,
         interpretation: null,
         tag: null,
         knowledge: null,
+        knowledge_retrieval: null,
         error: null,
         allTags: [],
       };
-      byStep.set(e.step_number, b);
+      byStep.set(step, b);
     }
     const slot = e.event_type as keyof StepBundle;
     if (slot in b && !b[slot]) {
       (b as unknown as Record<string, DeliberationEvent>)[slot] = e;
     }
-    for (const t of e.semantic_tags) {
+    for (const t of e.semantic_tags ?? []) {
       if (!b.allTags.includes(t)) b.allTags.push(t);
     }
   }

@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { isAuthConfigured } from "@/lib/supabase";
 import LoginForm from "./LoginForm";
+import { FunMark } from "@/components/fun";
 
 export const dynamic = "force-dynamic";
 
@@ -14,33 +15,106 @@ export default function LoginPage({
   const error = searchParams.error;
 
   return (
-    <main className="mx-auto flex min-h-screen max-w-md flex-col justify-center px-6 py-12">
-      <div className="rounded-xl border border-neutral-800 bg-neutral-950/60 p-8">
-        <div className="font-mono text-[10px] uppercase tracking-widest text-neutral-600">
-          sign in
+    <main
+      style={{
+        minHeight: "100vh",
+        background: "var(--cream)",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        padding: "48px 24px",
+      }}
+    >
+      <div
+        className="card"
+        style={{
+          maxWidth: 440,
+          width: "100%",
+          padding: 32,
+          background: "var(--cream)",
+        }}
+      >
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: 12,
+            marginBottom: 18,
+          }}
+        >
+          <FunMark size={32} />
+          <span className="ser" style={{ fontSize: 28, lineHeight: 1 }}>
+            Panel
+          </span>
+          <span className="chip" style={{ marginLeft: "auto" }}>
+            sign in
+          </span>
         </div>
-        <h1 className="mt-2 text-2xl font-semibold text-neutral-50">Panel</h1>
-        <p className="mt-3 text-sm text-neutral-400">
+
+        <h1
+          className="ser"
+          style={{
+            fontSize: 34,
+            lineHeight: 1.1,
+            margin: 0,
+            paddingBottom: 8,
+          }}
+        >
+          Let&apos;s{" "}
+          <span
+            className="ser-i"
+            style={{ color: "var(--implementer)" }}
+          >
+            get you in.
+          </span>
+        </h1>
+        <p
+          style={{
+            fontSize: 14,
+            color: "var(--ink-2)",
+            marginTop: 10,
+            lineHeight: 1.5,
+          }}
+        >
           {configured
             ? "Enter your email. We'll send you a magic link — no password."
             : "Auth isn't configured yet. The app is running open; any email lets you in."}
         </p>
 
         {error ? (
-          <div className="mt-4 rounded border border-rose-500/30 bg-rose-500/5 p-3 text-xs text-rose-300">
+          <div
+            className="card-tight"
+            style={{
+              marginTop: 18,
+              padding: 14,
+              background: "var(--peach)",
+              fontSize: 12,
+              color: "var(--hot)",
+            }}
+          >
             {error}
           </div>
         ) : null}
 
-        <div className="mt-6">
+        <div style={{ marginTop: 22 }}>
           <LoginForm configured={configured} next={next} />
         </div>
 
-        <p className="mt-6 text-xs text-neutral-600">
-          Public share pages (<code className="text-neutral-400">/share/…</code>)
-          don&apos;t require a login.{" "}
-          <Link href="/" className="text-neutral-400 hover:text-neutral-200">
-            Back to home →
+        <p
+          style={{
+            marginTop: 22,
+            fontSize: 12,
+            color: "var(--ink-3)",
+            lineHeight: 1.5,
+          }}
+        >
+          Public share pages (
+          <span className="mono">/share/…</span>) don&apos;t require a login.{" "}
+          <Link
+            href="/"
+            style={{ color: "var(--implementer)", textDecoration: "underline" }}
+          >
+            back to home →
           </Link>
         </p>
       </div>

@@ -1,69 +1,83 @@
 "use client";
 
-import { DeliberationEvent, KnowledgeEntry } from "@/lib/backend";
+import { KnowledgeEntry } from "@/lib/backend";
 import type { StepBundle } from "@/lib/jury-bundle";
+import { AgentKey, AgentPill, FunTag, TAG_STYLE } from "@/components/fun";
 export { bundleEvents, type StepBundle } from "@/lib/jury-bundle";
 
-export const TAG_COLORS: Record<string, string> = {
-  hypothesis: "bg-violet-500/20 text-violet-200 border-violet-500/40",
-  "data-check": "bg-sky-500/20 text-sky-200 border-sky-500/40",
-  "method-choice": "bg-indigo-500/20 text-indigo-200 border-indigo-500/40",
-  debug: "bg-amber-500/20 text-amber-200 border-amber-500/40",
-  pivot: "bg-fuchsia-500/20 text-fuchsia-200 border-fuchsia-500/40",
-  result: "bg-emerald-500/20 text-emerald-200 border-emerald-500/40",
-  "pitfall-detected": "bg-rose-500/25 text-rose-200 border-rose-500/50",
-  decision: "bg-cyan-500/20 text-cyan-200 border-cyan-500/40",
-};
+export const TAG_COLORS = TAG_STYLE; // back-compat alias
 
 export function TagPill({ tag }: { tag: string }) {
-  const cls =
-    TAG_COLORS[tag] ?? "bg-neutral-700/30 text-neutral-300 border-neutral-600";
-  return (
-    <span
-      className={`inline-block rounded border px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wider ${cls}`}
-    >
-      {tag}
-    </span>
-  );
+  return <FunTag name={tag} />;
 }
 
 function Lane({
-  color,
-  icon,
-  label,
-  subtitle,
+  agent,
+  stage,
+  status,
   children,
 }: {
-  color: string;
-  icon: string;
-  label: string;
-  subtitle?: string;
+  agent: AgentKey;
+  stage: string;
+  status?: string;
   children: React.ReactNode;
 }) {
   return (
-    <section className={`rounded-md border-l-2 pl-4 ${color}`}>
-      <header className="flex items-baseline gap-2">
-        <span className="text-sm">{icon}</span>
-        <span className="text-[10px] font-medium uppercase tracking-wider text-neutral-400">
-          {label}
-        </span>
-        {subtitle ? (
-          <span className="text-[10px] text-neutral-600">{subtitle}</span>
+    <div
+      style={{
+        display: "grid",
+        gridTemplateColumns: "180px 1fr",
+        gap: 20,
+        padding: "16px 0",
+        borderTop: "1.5px dashed var(--ink)",
+      }}
+    >
+      <div>
+        <AgentPill agent={agent} suffix={stage} />
+        {status ? (
+          <div
+            className="mono"
+            style={{
+              marginTop: 6,
+              fontSize: 10,
+              color: "var(--hot)",
+              fontWeight: 700,
+              textTransform: "uppercase",
+              letterSpacing: "0.14em",
+            }}
+          >
+            {status}
+          </div>
         ) : null}
-      </header>
-      <div className="mt-1.5">{children}</div>
-    </section>
+      </div>
+      <div style={{ minWidth: 0 }}>{children}</div>
+    </div>
   );
 }
 
-export function StepCard({ bundle }: { bundle: StepBundle }) {
-  const { step, plan, code, output, interpretation, tag, knowledge, error } =
-    bundle;
+export function StepCard({
+  bundle,
+  active,
+}: {
+  bundle: StepBundle;
+  active?: boolean;
+}) {
+  const {
+    step,
+    plan,
+    code,
+    output,
+    interpretation,
+    tag,
+    knowledge,
+    knowledge_retrieval,
+    error,
+  } = bundle;
 
   let interpParsed: Record<string, unknown> | null = null;
   if (interpretation) {
     try {
-      interpParsed = JSON.parse(interpretation.content.body);
+      interpParsed = JSON.parse(interpretation.content?.body ?? "{}");
     } catch {
       interpParsed = null;
     }
@@ -72,7 +86,7 @@ export function StepCard({ bundle }: { bundle: StepBundle }) {
   let planParsed: Record<string, unknown> | null = null;
   if (plan) {
     try {
-      planParsed = JSON.parse(plan.content.body);
+      planParsed = JSON.parse(plan.content?.body ?? "{}");
     } catch {
       planParsed = null;
     }
@@ -80,59 +94,181 @@ export function StepCard({ bundle }: { bundle: StepBundle }) {
 
   const hasError =
     !!error ||
-    !!(output && output.content.summary.toLowerCase().startsWith("error"));
+    !!(output && (output.content?.summary ?? "").toLowerCase().startsWith("error"));
+
+  const planSummary = plan?.content?.summary ?? "…";
 
   return (
-    <article className="rounded-xl border border-neutral-800 bg-neutral-950/60 p-5 shadow-[0_0_0_1px_rgba(255,255,255,0.02)]">
-      <header className="mb-4 flex flex-wrap items-center justify-between gap-2">
-        <div className="flex items-center gap-3">
-          <span className="rounded-md border border-neutral-800 bg-neutral-900 px-2.5 py-1 font-mono text-xs text-neutral-400">
-            step {step + 1}
-          </span>
-          <span className="text-sm text-neutral-200">
-            {plan?.content.summary ?? "…"}
-          </span>
+    <article
+      className="card"
+      style={{
+        padding: 0,
+        background: active ? "var(--cream)" : "var(--cream-2)",
+        borderWidth: active ? 3 : 2.5,
+        marginBottom: 18,
+      }}
+    >
+      <header
+        style={{
+          display: "flex",
+          alignItems: "center",
+          gap: 16,
+          padding: "14px 22px",
+          borderBottom: "2px dashed var(--ink)",
+          flexWrap: "wrap",
+        }}
+      >
+        <span
+          className="ser"
+          style={{
+            fontSize: 32,
+            lineHeight: 1,
+            color: active ? "var(--implementer)" : "var(--ink-3)",
+          }}
+        >
+          §{step + 1}
+        </span>
+        <div style={{ flex: 1, minWidth: 200 }}>
+          <div className="ser" style={{ fontSize: 19, lineHeight: 1.25 }}>
+            {planSummary}
+          </div>
+          {code?.cell_ref ? (
+            <div
+              className="mono"
+              style={{ fontSize: 10, color: "var(--ink-3)", marginTop: 4 }}
+            >
+              {code.cell_ref}
+            </div>
+          ) : null}
         </div>
-        <div className="flex flex-wrap gap-1">
+        <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
           {bundle.allTags.map((t) => (
-            <TagPill key={t} tag={t} />
+            <FunTag key={t} name={t} />
           ))}
-          {hasError ? <TagPill tag="error" /> : null}
+          {hasError ? <FunTag name="error" /> : null}
+          {active ? (
+            <span
+              className="sticker animate-bounce2"
+              style={{ background: "var(--hot)", color: "var(--cream)" }}
+            >
+              ● live
+            </span>
+          ) : null}
         </div>
       </header>
 
-      <div className="space-y-4">
+      <div style={{ padding: "0 22px 18px" }}>
+        {knowledge_retrieval ? (
+          <Lane agent="archivist" stage="kb retrieval" status="prior knowledge">
+            <div
+              className="card-tight"
+              style={{
+                background: "var(--mint)",
+                padding: 14,
+                fontSize: 12.5,
+                lineHeight: 1.55,
+              }}
+            >
+              <div
+                className="ser"
+                style={{
+                  fontSize: 16,
+                  paddingBottom: 6,
+                  color: "var(--ink)",
+                }}
+              >
+                🔎 {knowledge_retrieval.content?.summary ?? ""}
+              </div>
+              <pre
+                className="mono"
+                style={{
+                  margin: 0,
+                  whiteSpace: "pre-wrap",
+                  fontSize: 11.5,
+                  color: "var(--ink-2)",
+                  lineHeight: 1.55,
+                }}
+              >
+                {knowledge_retrieval.content?.body ?? ""}
+              </pre>
+            </div>
+          </Lane>
+        ) : null}
+
         {plan ? (
-          <Lane
-            color="border-implementer/70"
-            icon="📘"
-            label="Implementer · plan"
-            subtitle={plan.event_id}
-          >
+          <Lane agent="implementer" stage="plan">
             {planParsed && typeof planParsed.hypothesis === "string" ? (
-              <div className="text-xs text-neutral-400">
-                <span className="text-neutral-500">hypothesis · </span>
+              <div
+                style={{
+                  fontSize: 13,
+                  lineHeight: 1.5,
+                  color: "var(--ink-2)",
+                }}
+              >
+                <span
+                  className="mono"
+                  style={{
+                    fontSize: 10,
+                    fontWeight: 700,
+                    textTransform: "uppercase",
+                    letterSpacing: "0.14em",
+                  }}
+                >
+                  hypothesis ·{" "}
+                </span>
                 {String(planParsed.hypothesis)}
               </div>
             ) : null}
             {plan.chosen_because ? (
-              <div className="mt-1 rounded border-l border-neutral-800 pl-3 text-xs italic text-neutral-400">
+              <div
+                style={{
+                  marginTop: 8,
+                  paddingLeft: 12,
+                  borderLeft: "2px solid var(--ink)",
+                  fontSize: 12,
+                  color: "var(--ink-2)",
+                  fontStyle: "italic",
+                }}
+              >
                 {plan.chosen_because}
               </div>
             ) : null}
             {plan.alternatives_considered.length > 0 ? (
-              <details className="mt-2">
-                <summary className="cursor-pointer text-[11px] text-neutral-500 hover:text-neutral-300">
+              <details style={{ marginTop: 10 }}>
+                <summary
+                  className="mono"
+                  style={{
+                    cursor: "pointer",
+                    fontSize: 11,
+                    color: "var(--ink-3)",
+                  }}
+                >
                   {plan.alternatives_considered.length} alternative
-                  {plan.alternatives_considered.length > 1 ? "s" : ""}{" "}
-                  considered
+                  {plan.alternatives_considered.length > 1 ? "s" : ""} considered
                 </summary>
-                <ul className="mt-1 space-y-1 pl-3">
+                <ul
+                  style={{
+                    marginTop: 6,
+                    paddingLeft: 16,
+                    listStyle: "disc",
+                  }}
+                >
                   {plan.alternatives_considered.map((a, i) => (
-                    <li key={i} className="text-xs text-neutral-400">
-                      <span className="text-neutral-300">{a.path}</span>
-                      <span className="text-neutral-600"> — </span>
-                      <span className="italic">{a.rejected_because}</span>
+                    <li
+                      key={i}
+                      style={{
+                        fontSize: 12,
+                        color: "var(--ink-2)",
+                        marginBottom: 4,
+                      }}
+                    >
+                      <span style={{ color: "var(--ink)", fontWeight: 600 }}>
+                        {a.path}
+                      </span>{" "}
+                      <span style={{ color: "var(--ink-3)" }}>—</span>{" "}
+                      <span style={{ fontStyle: "italic" }}>
+                        {a.rejected_because}
+                      </span>
                     </li>
                   ))}
                 </ul>
@@ -142,71 +278,135 @@ export function StepCard({ bundle }: { bundle: StepBundle }) {
         ) : null}
 
         {code ? (
-          <Lane
-            color="border-implementer/70"
-            icon="⚙"
-            label="Implementer · code"
-            subtitle={code.cell_ref ?? undefined}
-          >
-            <pre className="mt-1 overflow-x-auto rounded bg-black/70 p-3 text-[11px] leading-relaxed text-neutral-300">
-              <code>{code.content.body}</code>
+          <Lane agent="implementer" stage="code">
+            <pre
+              className="code-block"
+              style={{ overflowX: "auto", whiteSpace: "pre" }}
+            >
+              {code.content?.body ?? ""}
             </pre>
           </Lane>
         ) : null}
 
         {output ? (
-          <Lane
-            color="border-neutral-600"
-            icon="▶"
-            label="kernel · output"
-            subtitle={output.event_id}
-          >
+          <Lane agent="kernel" stage="output">
             <pre
-              className={`mt-1 overflow-x-auto rounded bg-black/50 p-3 text-[11px] leading-relaxed ${
-                hasError ? "text-rose-300" : "text-neutral-400"
-              }`}
+              style={{
+                margin: 0,
+                fontFamily: "JetBrains Mono, monospace",
+                fontSize: 11.5,
+                background: "var(--cream-2)",
+                padding: 12,
+                borderRadius: 8,
+                border: "1.5px solid var(--ink)",
+                lineHeight: 1.55,
+                whiteSpace: "pre-wrap",
+                wordBreak: "break-word",
+                color: hasError ? "var(--hot)" : "var(--ink-2)",
+                maxHeight: 260,
+                overflow: "auto",
+              }}
             >
-              {output.content.body.slice(0, 2400)}
-              {output.content.body.length > 2400 ? "\n…" : ""}
+              {(output.content?.body ?? "").slice(0, 2400)}
+              {(output.content?.body ?? "").length > 2400 ? "\n…" : ""}
             </pre>
           </Lane>
         ) : null}
 
-        {interpretation && interpParsed ? (
+        {interpretation ? (
           <Lane
-            color="border-interpreter/70"
-            icon="🔍"
-            label="Interpreter · reads"
-            subtitle={interpretation.event_id}
+            agent="interpreter"
+            stage="reads"
+            status={active && !tag ? "● live" : undefined}
           >
-            {typeof interpParsed.what_it_means === "string" ? (
-              <div className="text-sm text-neutral-200">
+            {interpParsed && typeof interpParsed.what_it_means === "string" ? (
+              <div
+                className="ser"
+                style={{ fontSize: 17, lineHeight: 1.4, fontWeight: 600 }}
+              >
                 {String(interpParsed.what_it_means)}
               </div>
-            ) : null}
-            {Array.isArray(interpParsed.risks_or_concerns) &&
+            ) : (
+              <div style={{ fontSize: 13, color: "var(--ink-2)" }}>
+                {interpretation.content?.summary ?? ""}
+              </div>
+            )}
+            {interpParsed &&
+            Array.isArray(interpParsed.risks_or_concerns) &&
             interpParsed.risks_or_concerns.length > 0 ? (
-              <div className="mt-3 rounded border border-rose-500/30 bg-rose-500/5 p-3">
-                <div className="mb-1 flex items-center gap-2 text-[10px] uppercase tracking-wider text-rose-300">
-                  <span>⚠</span>
-                  risks flagged ({interpParsed.risks_or_concerns.length})
+              <div
+                className="card-tight"
+                style={{
+                  marginTop: 12,
+                  padding: 12,
+                  background: "var(--peach)",
+                }}
+              >
+                <div
+                  className="mono"
+                  style={{
+                    fontSize: 10,
+                    color: "var(--hot)",
+                    textTransform: "uppercase",
+                    letterSpacing: "0.14em",
+                    fontWeight: 700,
+                    marginBottom: 6,
+                  }}
+                >
+                  ⚠ risk
+                  {(interpParsed.risks_or_concerns as string[]).length > 1
+                    ? "s"
+                    : ""}{" "}
+                  flagged
                 </div>
-                <ul className="list-disc space-y-1 pl-5 text-xs text-neutral-200">
+                <ul style={{ margin: 0, paddingLeft: 16, listStyle: "disc" }}>
                   {(interpParsed.risks_or_concerns as string[]).map((r, i) => (
-                    <li key={i}>{r}</li>
+                    <li
+                      key={i}
+                      style={{
+                        fontSize: 13,
+                        lineHeight: 1.5,
+                        color: "var(--ink)",
+                      }}
+                    >
+                      {r}
+                    </li>
                   ))}
                 </ul>
               </div>
             ) : null}
-            {Array.isArray(interpParsed.verify_next) &&
+            {interpParsed &&
+            Array.isArray(interpParsed.verify_next) &&
             interpParsed.verify_next.length > 0 ? (
-              <details className="mt-2">
-                <summary className="cursor-pointer text-[11px] text-neutral-500 hover:text-neutral-300">
-                  verify_next ({interpParsed.verify_next.length})
+              <details style={{ marginTop: 10 }}>
+                <summary
+                  className="mono"
+                  style={{
+                    cursor: "pointer",
+                    fontSize: 11,
+                    color: "var(--ink-3)",
+                  }}
+                >
+                  verify_next ({(interpParsed.verify_next as string[]).length})
                 </summary>
-                <ul className="mt-1 list-disc space-y-0.5 pl-5 text-xs text-neutral-400">
+                <ul
+                  style={{
+                    marginTop: 6,
+                    paddingLeft: 16,
+                    listStyle: "disc",
+                  }}
+                >
                   {(interpParsed.verify_next as string[]).map((v, i) => (
-                    <li key={i}>{v}</li>
+                    <li
+                      key={i}
+                      style={{
+                        fontSize: 12,
+                        color: "var(--ink-2)",
+                        marginBottom: 4,
+                      }}
+                    >
+                      {v}
+                    </li>
                   ))}
                 </ul>
               </details>
@@ -215,43 +415,75 @@ export function StepCard({ bundle }: { bundle: StepBundle }) {
         ) : null}
 
         {tag ? (
-          <Lane
-            color="border-tagger/70"
-            icon="🏷"
-            label="Tagger · semantic tags"
-            subtitle={tag.event_id}
-          >
-            <div className="flex flex-wrap items-center gap-1.5">
-              {tag.semantic_tags.length === 0 ? (
-                <span className="text-xs text-neutral-500">(no tags)</span>
+          <Lane agent="tagger" stage="tags">
+            <div
+              style={{
+                display: "flex",
+                gap: 6,
+                flexWrap: "wrap",
+                alignItems: "center",
+              }}
+            >
+              {(tag.semantic_tags ?? []).length === 0 ? (
+                <span style={{ fontSize: 12, color: "var(--ink-3)" }}>
+                  (no tags)
+                </span>
               ) : (
-                tag.semantic_tags.map((t) => <TagPill key={t} tag={t} />)
+                (tag.semantic_tags ?? []).map((t) => (
+                  <FunTag key={t} name={t} />
+                ))
               )}
             </div>
-            {tag.content.body ? (
-              <div className="mt-1 text-[11px] italic text-neutral-500">
-                {tag.content.body}
+            {tag.content?.body ? (
+              <div
+                style={{
+                  marginTop: 6,
+                  fontSize: 11,
+                  color: "var(--ink-3)",
+                  fontStyle: "italic",
+                }}
+              >
+                {tag.content?.body}
               </div>
             ) : null}
           </Lane>
         ) : null}
 
         {knowledge ? (
-          <Lane
-            color="border-archivist/70"
-            icon="📚"
-            label="Archivist · knowledge committed"
-            subtitle={knowledge.event_id}
-          >
-            <div className="rounded border border-archivist/40 bg-archivist/5 p-3">
-              <div className="text-sm text-neutral-100">
-                {knowledge.content.summary}
+          <Lane agent="archivist" stage="commits">
+            <div
+              className="card-tight"
+              style={{ padding: 12, background: "var(--mint)" }}
+            >
+              <div
+                className="ser"
+                style={{ fontSize: 16, lineHeight: 1.4, fontWeight: 700 }}
+              >
+                {knowledge.content?.summary ?? ""}
               </div>
-              {knowledge.content.body ? (
-                <div className="mt-1 text-[11px] text-neutral-500">
-                  {knowledge.content.body}
+              {knowledge.content?.body ? (
+                <div
+                  style={{
+                    marginTop: 6,
+                    fontSize: 12,
+                    color: "var(--ink-2)",
+                    lineHeight: 1.5,
+                  }}
+                >
+                  {knowledge.content?.body}
                 </div>
               ) : null}
+              <div
+                className="mono"
+                style={{
+                  fontSize: 10,
+                  color: "var(--ink-3)",
+                  marginTop: 6,
+                  fontWeight: 700,
+                }}
+              >
+                conf {knowledge.confidence.toFixed(2)}
+              </div>
             </div>
           </Lane>
         ) : null}
@@ -263,24 +495,52 @@ export function StepCard({ bundle }: { bundle: StepBundle }) {
 export function KnowledgePanel({ knowledge }: { knowledge: KnowledgeEntry[] }) {
   if (knowledge.length === 0) return null;
   return (
-    <aside className="mb-6 rounded-xl border border-archivist/40 bg-archivist/5 p-4">
-      <div className="flex items-center gap-2 text-[11px] uppercase tracking-wider text-archivist">
-        <span>📚</span>
-        knowledge base ({knowledge.length})
+    <section
+      className="card"
+      style={{ padding: 18, background: "var(--mint)", marginBottom: 24 }}
+    >
+      <div
+        style={{
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "baseline",
+          marginBottom: 10,
+          flexWrap: "wrap",
+          gap: 8,
+        }}
+      >
+        <AgentPill agent="archivist" suffix={`committed · ${knowledge.length}`} />
+        <span
+          className="mono"
+          style={{ fontSize: 10, color: "var(--ink-3)", fontWeight: 700 }}
+        >
+          knowledge.jsonl
+        </span>
       </div>
-      <ul className="mt-2 space-y-1.5">
-        {knowledge.map((k) => (
-          <li key={k.knowledge_id} className="text-sm">
-            <span className="rounded bg-black/50 px-1.5 py-0.5 font-mono text-[10px] uppercase tracking-wider text-archivist">
-              {k.kind}
-            </span>
-            <span className="ml-2 text-neutral-200">{k.claim}</span>
-            <span className="ml-2 text-[10px] text-neutral-500">
-              conf {k.confidence.toFixed(2)}
-            </span>
-          </li>
-        ))}
-      </ul>
-    </aside>
+      {knowledge.map((k, i) => (
+        <div
+          key={k.knowledge_id}
+          style={{
+            display: "grid",
+            gridTemplateColumns: "90px 1fr auto",
+            gap: 14,
+            padding: "10px 0",
+            borderTop: i ? "1.5px dashed var(--ink)" : "none",
+            alignItems: "baseline",
+          }}
+        >
+          <FunTag name={k.kind} />
+          <div
+            className="ser"
+            style={{ fontSize: 16, lineHeight: 1.3, fontWeight: 700 }}
+          >
+            {k.claim}
+          </div>
+          <span className="mono" style={{ fontSize: 11, fontWeight: 700 }}>
+            conf {k.confidence.toFixed(2)}
+          </span>
+        </div>
+      ))}
+    </section>
   );
 }

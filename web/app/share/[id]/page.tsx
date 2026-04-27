@@ -2,6 +2,14 @@ import { notFound } from "next/navigation";
 import { getExperiment } from "@/lib/backend";
 import { bundleEvents } from "@/lib/jury-bundle";
 import { KnowledgePanel, StepCard } from "@/components/jury";
+import { ColabHandoff } from "@/components/colab-handoff";
+import {
+  FunMark,
+  FunTag,
+  StatBlock,
+  StatusSticker,
+  TAG_STYLE,
+} from "@/components/fun";
 
 export const dynamic = "force-dynamic";
 
@@ -22,23 +30,14 @@ export async function generateMetadata({
   }
 }
 
-function statusPill(status: string) {
-  const color =
-    status === "running"
-      ? "bg-amber-500/15 text-amber-300 border-amber-500/30"
-      : status === "complete"
-      ? "bg-emerald-500/15 text-emerald-300 border-emerald-500/30"
-      : status === "failed"
-      ? "bg-rose-500/15 text-rose-300 border-rose-500/30"
-      : "bg-neutral-500/15 text-neutral-400 border-neutral-500/30";
-  return (
-    <span
-      className={`inline-block rounded border px-2 py-0.5 text-[10px] uppercase tracking-wider ${color}`}
-    >
-      {status}
-    </span>
-  );
-}
+const STAT_TINTS = [
+  "var(--lilac)",
+  "var(--sky)",
+  "var(--mint)",
+  "var(--peach)",
+  "var(--lemon)",
+];
+const STAT_ROTS = [-2, 1.5, -1, 2, -1.5];
 
 export default async function SharePage({
   params,
@@ -54,114 +53,323 @@ export default async function SharePage({
 
   const bundles = bundleEvents(data.events);
   const knowledge = data.knowledge;
-  const goal = data.meta?.goal;
-  const dataset = data.meta?.dataset;
+  const goal = data.meta?.goal ?? null;
+  const dataset = data.meta?.dataset ?? null;
   const createdAt = data.meta?.created_at
     ? new Date(data.meta.created_at).toLocaleString()
     : null;
 
-  // Cheap stats — count pitfalls, errors, tags surfaced.
   const tagCounts: Record<string, number> = {};
   for (const e of data.events) {
-    for (const t of e.semantic_tags) tagCounts[t] = (tagCounts[t] ?? 0) + 1;
+    for (const t of e.semantic_tags ?? []) tagCounts[t] = (tagCounts[t] ?? 0) + 1;
   }
-  const topTags = Object.entries(tagCounts)
-    .sort((a, b) => b[1] - a[1])
-    .slice(0, 6);
+  const sortedTags = Object.entries(tagCounts).sort((a, b) => b[1] - a[1]);
+  const topTagCount = sortedTags.length > 0 ? sortedTags[0][1] : 0;
+  const pitfallCount = tagCounts["pitfall-detected"] ?? 0;
+
+  const stats: [string | number, string][] = [
+    [bundles.length, "steps"],
+    [data.event_count, "events"],
+    [knowledge.length, "knowledge"],
+    [pitfallCount, pitfallCount === 1 ? "pitfall" : "pitfalls"],
+  ];
 
   return (
-    <main className="mx-auto max-w-4xl px-6 py-10">
-      <header className="rounded-xl border border-neutral-800 bg-neutral-950/60 p-6">
-        <div className="flex items-center justify-between gap-3">
-          <div>
-            <div className="font-mono text-[10px] uppercase tracking-widest text-neutral-600">
-              Panel · shared experiment
-            </div>
-            <div className="mt-1 font-mono text-sm text-neutral-400">
-              {data.experiment_id}
-            </div>
-          </div>
-          <div className="flex items-center gap-2">
-            {statusPill(data.status)}
-            <a
-              href={`/experiment/${data.experiment_id}`}
-              className="rounded border border-neutral-700 bg-neutral-900 px-3 py-1 text-xs text-neutral-300 hover:border-neutral-500 hover:bg-neutral-800"
-            >
-              Open in dashboard ↗
-            </a>
-          </div>
-        </div>
+    <main style={{ minHeight: "100vh", background: "var(--cream)" }}>
+      <div style={{ maxWidth: 1280, margin: "0 auto" }}>
+        <header
+          style={{
+            padding: "14px 56px",
+            borderBottom: "2px dashed var(--ink)",
+            display: "flex",
+            alignItems: "center",
+            gap: 12,
+            flexWrap: "wrap",
+          }}
+        >
+          <FunMark size={24} />
+          <a
+            href="/"
+            className="ser"
+            style={{ fontSize: 22, color: "var(--ink)", textDecoration: "none" }}
+          >
+            Panel
+          </a>
+          <span className="chip" style={{ background: "var(--lemon)" }}>
+            shared · public
+          </span>
+          <span
+            className="mono"
+            style={{
+              fontSize: 11,
+              color: "var(--ink-3)",
+              marginLeft: "auto",
+            }}
+          >
+            {data.experiment_id}
+          </span>
+          <StatusSticker status={data.status} />
+          <a
+            href={`/experiment/${data.experiment_id}`}
+            className="btn-blob ghost"
+            style={{ padding: "8px 14px", fontSize: 12 }}
+          >
+            Open in dashboard ↗
+          </a>
+        </header>
 
-        {goal ? (
-          <h1 className="mt-4 text-xl font-medium text-neutral-100">
-            {goal}
+        <section
+          style={{
+            padding: "60px 56px 36px",
+            maxWidth: 1080,
+            margin: "0 auto",
+          }}
+        >
+          <div className="eyebrow" style={{ marginBottom: 18 }}>
+            ★ {data.experiment_id}
+            {createdAt ? ` · ${createdAt}` : ""}
+            {` · ${data.event_count} events`}
+          </div>
+          <h1
+            className="ser"
+            style={{
+              fontSize: 68,
+              lineHeight: 1.05,
+              margin: 0,
+              paddingBottom: 6,
+            }}
+          >
+            {goal ? goal : "Untitled experiment"}
           </h1>
-        ) : null}
-
-        <div className="mt-4 flex flex-wrap items-center gap-x-6 gap-y-2 text-xs text-neutral-500">
           {dataset ? (
-            <span>
-              <span className="text-neutral-600">dataset · </span>
-              <span className="font-mono text-neutral-300">{dataset}</span>
-            </span>
+            <p
+              className="ser-i"
+              style={{
+                fontSize: 18,
+                lineHeight: 1.4,
+                color: "var(--ink-2)",
+                marginTop: 16,
+                maxWidth: 800,
+              }}
+            >
+              dataset · <span className="mono">{dataset}</span>
+            </p>
           ) : null}
-          {createdAt ? (
-            <span>
-              <span className="text-neutral-600">started · </span>
-              <span className="text-neutral-300">{createdAt}</span>
-            </span>
-          ) : null}
-          <span>
-            <span className="text-neutral-600">events · </span>
-            <span className="text-neutral-300">{data.event_count}</span>
-          </span>
-          <span>
-            <span className="text-neutral-600">steps · </span>
-            <span className="text-neutral-300">{bundles.length}</span>
-          </span>
-          <span>
-            <span className="text-neutral-600">knowledge · </span>
-            <span className="text-neutral-300">{knowledge.length}</span>
-          </span>
-        </div>
+        </section>
 
-        {topTags.length > 0 ? (
-          <div className="mt-4 flex flex-wrap gap-1.5">
-            {topTags.map(([tag, count]) => (
-              <span
-                key={tag}
-                className="rounded border border-neutral-800 bg-neutral-900 px-2 py-0.5 text-[10px] uppercase tracking-wider text-neutral-400"
+        <section
+          style={{
+            padding: "0 56px 40px",
+            display: "flex",
+            gap: 16,
+            justifyContent: "center",
+            flexWrap: "wrap",
+          }}
+        >
+          {stats.map(([n, l], i) => (
+            <StatBlock
+              key={l}
+              n={n}
+              label={l}
+              color={STAT_TINTS[i % STAT_TINTS.length]}
+              rotate={STAT_ROTS[i % STAT_ROTS.length]}
+            />
+          ))}
+        </section>
+
+        {sortedTags.length > 0 || knowledge.length > 0 ? (
+          <section
+            style={{
+              padding: "0 56px 40px",
+              display: "grid",
+              gridTemplateColumns: sortedTags.length > 0 && knowledge.length > 0
+                ? "1fr 1.4fr"
+                : "1fr",
+              gap: 36,
+            }}
+          >
+            {sortedTags.length > 0 ? (
+              <div
+                className="card"
+                style={{ padding: 22, background: "var(--cream-2)" }}
               >
-                {tag} <span className="text-neutral-600">· {count}</span>
-              </span>
-            ))}
-          </div>
+                <div className="eyebrow" style={{ marginBottom: 12 }}>
+                  📊 tag distribution
+                </div>
+                {sortedTags.map(([t, n], i) => {
+                  const w = (n / Math.max(topTagCount, 1)) * 100;
+                  const m = TAG_STYLE[t] ?? {
+                    color: "var(--ink)",
+                    bg: "var(--cream-2)",
+                  };
+                  return (
+                    <div
+                      key={t}
+                      style={{
+                        display: "grid",
+                        gridTemplateColumns: "130px 1fr 24px",
+                        gap: 12,
+                        padding: "7px 0",
+                        alignItems: "center",
+                        borderTop: i ? "1.5px dashed var(--ink)" : "none",
+                      }}
+                    >
+                      <FunTag name={t} />
+                      <div
+                        style={{
+                          height: 10,
+                          background: "var(--cream)",
+                          border: "1.5px solid var(--ink)",
+                          borderRadius: 999,
+                          overflow: "hidden",
+                        }}
+                      >
+                        <div
+                          style={{
+                            width: `${w}%`,
+                            height: "100%",
+                            background: m.color,
+                          }}
+                        />
+                      </div>
+                      <div
+                        className="mono"
+                        style={{
+                          fontSize: 11,
+                          fontWeight: 700,
+                          textAlign: "right",
+                        }}
+                      >
+                        {n}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            ) : null}
+
+            {knowledge.length > 0 ? (
+              <div>
+                <div className="eyebrow" style={{ marginBottom: 12 }}>
+                  📚 knowledge committed · {knowledge.length}
+                </div>
+                <div
+                  style={{
+                    display: "flex",
+                    flexDirection: "column",
+                    gap: 10,
+                  }}
+                >
+                  {knowledge.map((k, i) => {
+                    const tint =
+                      k.kind === "pitfall"
+                        ? "var(--peach)"
+                        : k.kind === "pattern"
+                        ? "var(--sky)"
+                        : k.kind === "heuristic"
+                        ? "var(--lilac)"
+                        : "var(--mint)";
+                    const rot = [-0.5, 0.5, -0.3, 0.4, -0.4][i % 5];
+                    return (
+                      <div
+                        key={k.knowledge_id}
+                        className="card-tight"
+                        style={{
+                          padding: 14,
+                          background: tint,
+                          transform: `rotate(${rot}deg)`,
+                        }}
+                      >
+                        <div
+                          style={{
+                            display: "flex",
+                            justifyContent: "space-between",
+                            alignItems: "baseline",
+                            gap: 12,
+                          }}
+                        >
+                          <span className="chip">{k.kind}</span>
+                          <span
+                            className="mono"
+                            style={{ fontSize: 10, fontWeight: 700 }}
+                          >
+                            conf {k.confidence.toFixed(2)}
+                          </span>
+                        </div>
+                        <div
+                          className="ser"
+                          style={{
+                            fontSize: 16,
+                            lineHeight: 1.35,
+                            marginTop: 8,
+                            fontWeight: 700,
+                          }}
+                        >
+                          {k.claim}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            ) : null}
+          </section>
         ) : null}
-      </header>
 
-      <div className="mt-8">
-        <KnowledgePanel knowledge={knowledge} />
+        <section style={{ padding: "0 56px 24px" }}>
+          <ColabHandoff experimentId={data.experiment_id} />
+        </section>
 
-        <div className="space-y-4">
+        <section style={{ padding: "0 56px 40px" }}>
+          <KnowledgePanel knowledge={[]} />
           {bundles.length === 0 ? (
-            <div className="rounded-xl border border-dashed border-neutral-800 p-10 text-center text-sm text-neutral-500">
+            <div
+              className="card-tight"
+              style={{
+                padding: 28,
+                background: "var(--cream-2)",
+                textAlign: "center",
+                fontSize: 14,
+                color: "var(--ink-2)",
+              }}
+            >
               this experiment has no events yet.
             </div>
           ) : (
             bundles.map((b) => <StepCard key={b.step} bundle={b} />)
           )}
-        </div>
-      </div>
+        </section>
 
-      <footer className="mt-12 flex items-center justify-between border-t border-neutral-900 pt-6 text-xs text-neutral-600">
-        <span>
-          Rendered from <code className="text-neutral-500">deliberation.jsonl</code>.
-          No login required.
-        </span>
-        <a href="/" className="hover:text-neutral-400">
-          Panel →
-        </a>
-      </footer>
+        <footer
+          style={{
+            padding: "32px 56px",
+            borderTop: "2px dashed var(--ink)",
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
+            flexWrap: "wrap",
+            gap: 12,
+          }}
+        >
+          <div
+            className="mono"
+            style={{ fontSize: 11, color: "var(--ink-3)" }}
+          >
+            rendered from deliberation.jsonl · no login required
+          </div>
+          <a
+            href="/"
+            style={{
+              fontSize: 12,
+              color: "var(--ink-3)",
+              textDecoration: "none",
+            }}
+            className="mono"
+          >
+            Panel →
+          </a>
+        </footer>
+      </div>
     </main>
   );
 }

@@ -1,8 +1,11 @@
 export const SERVER_BACKEND =
   process.env.PANEL_BACKEND ?? "http://backend:8000";
 
+// Default to same-origin Next.js rewrite (see next.config.js) so it works on
+// both localhost and tunneled HTTPS without mixed-content blocks. Override
+// with NEXT_PUBLIC_BACKEND_BROWSER only if you need direct backend access.
 export const BROWSER_BACKEND =
-  process.env.NEXT_PUBLIC_BACKEND_BROWSER ?? "http://localhost:8100";
+  process.env.NEXT_PUBLIC_BACKEND_BROWSER ?? "/api/backend";
 
 export type RunSummary = {
   experiment_id: string;
@@ -24,6 +27,7 @@ export type DeliberationEvent = {
     | "interpretation"
     | "tag"
     | "knowledge"
+    | "knowledge_retrieval"
     | "error";
   content: { summary: string; body: string };
   semantic_tags: string[];

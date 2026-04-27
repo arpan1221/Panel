@@ -22,7 +22,6 @@ export default function LoginForm({
     setError(null);
     if (!email.trim()) return;
 
-    // Auth not configured → bypass, go where they wanted.
     if (!configured) {
       router.push(next || "/");
       return;
@@ -49,36 +48,63 @@ export default function LoginForm({
 
   if (sent) {
     return (
-      <div className="rounded border border-emerald-500/30 bg-emerald-500/5 p-4 text-sm text-emerald-200">
-        Magic link sent to <span className="font-mono">{email}</span>. Click it
-        to finish signing in.
+      <div
+        className="card-tight"
+        style={{
+          padding: 16,
+          background: "var(--mint)",
+          fontSize: 14,
+        }}
+      >
+        <div
+          className="ser"
+          style={{ fontSize: 18, paddingBottom: 4, fontWeight: 700 }}
+        >
+          ✉️ magic link sent
+        </div>
+        <div style={{ fontSize: 13, color: "var(--ink-2)", lineHeight: 1.5 }}>
+          check <span className="mono">{email}</span> — click the link to finish
+          signing in.
+        </div>
       </div>
     );
   }
 
   return (
-    <form onSubmit={submit} className="space-y-3">
-      <label className="block">
-        <span className="text-xs uppercase tracking-wider text-neutral-500">
-          email
-        </span>
+    <form onSubmit={submit} style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+      <label style={{ display: "block" }}>
+        <div className="eyebrow" style={{ marginBottom: 8 }}>
+          📧 email
+        </div>
         <input
           type="email"
           required
           value={email}
           onChange={(e) => setEmail(e.target.value)}
           placeholder="you@example.com"
-          className="mt-1 w-full rounded border border-neutral-800 bg-neutral-950 p-2 font-mono text-sm text-neutral-200 focus:border-neutral-600 focus:outline-none"
+          className="input-fun"
         />
       </label>
       <button
         type="submit"
         disabled={submitting}
-        className="w-full rounded bg-emerald-600 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-500 disabled:cursor-not-allowed disabled:bg-neutral-700"
+        className="btn-blob animate-bounce2"
+        style={{
+          background: "var(--implementer)",
+          color: "var(--cream)",
+          justifyContent: "center",
+        }}
       >
-        {submitting ? "Sending…" : configured ? "Send magic link" : "Continue"}
+        {submitting ? "Sending…" : configured ? "✨ Send magic link" : "Continue"}
       </button>
-      {error ? <div className="text-xs text-rose-400">{error}</div> : null}
+      {error ? (
+        <div
+          className="mono"
+          style={{ fontSize: 11, color: "var(--hot)" }}
+        >
+          {error}
+        </div>
+      ) : null}
     </form>
   );
 }

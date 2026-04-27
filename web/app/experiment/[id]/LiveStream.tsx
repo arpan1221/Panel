@@ -7,17 +7,21 @@ import {
 } from "@/lib/backend";
 import { bundleEvents } from "@/lib/jury-bundle";
 import { KnowledgePanel, StepCard } from "@/components/jury";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { AGENTS, AgentKey, StatBlock, StatusSticker } from "@/components/fun";
+import { ColabHandoff } from "@/components/colab-handoff";
+import { Fragment, useEffect, useMemo, useRef, useState } from "react";
 
 type Status = "running" | "complete" | "failed" | "unknown";
 
-type Stage =
-  | "implementer"
-  | "kernel"
-  | "interpreter"
-  | "tagger"
-  | "archivist"
-  | "idle";
+type Stage = AgentKey | "idle";
+
+const PIPELINE: AgentKey[] = [
+  "implementer",
+  "kernel",
+  "interpreter",
+  "tagger",
+  "archivist",
+];
 
 function stageFromEvents(events: DeliberationEvent[], status: Status): Stage {
   if (status !== "running" && events.length > 0) return "idle";
@@ -42,33 +46,61 @@ function stageFromEvents(events: DeliberationEvent[], status: Status): Stage {
   }
 }
 
-function OrchestrationBanner({
-  stage,
+function stageLabel(s: Stage, status: Status): string {
+  if (status !== "running") return "idle";
+  if (s === "implementer") return "planning…";
+  if (s === "kernel") return "executing…";
+  if (s === "interpreter") return "reading…";
+  if (s === "tagger") return "tagging…";
+  if (s === "archivist") return "deciding…";
+  return "idle";
+}
+
+function elapsedString(startMs: number | null): string {
+  if (!startMs) return "—";
+  const ms = Date.now() - startMs;
+  const s = Math.floor(ms / 1000);
+  const mm = Math.floor(s / 60)
+    .toString()
+    .padStart(2, "0");
+  const ss = (s % 60).toString().padStart(2, "0");
+  return `${mm}:${ss}`;
+}
+
+function ExperimentHeader({
+  experimentId,
   status,
+  goal,
+  dataset,
+  maxSteps,
   events,
   knowledge,
-  experimentId,
+  startMs,
 }: {
-  stage: Stage;
+  experimentId: string;
   status: Status;
+  goal: string | null;
+  dataset: string | null;
+  maxSteps: number | null;
   events: DeliberationEvent[];
   knowledge: KnowledgeEntry[];
-  experimentId: string;
+  startMs: number | null;
 }) {
-  const stages: { key: Stage; label: string; dot: string }[] = [
-    { key: "implementer", label: "Implementer", dot: "bg-implementer" },
-    { key: "kernel", label: "Kernel", dot: "bg-neutral-400" },
-    { key: "interpreter", label: "Interpreter", dot: "bg-interpreter" },
-    { key: "tagger", label: "Tagger", dot: "bg-tagger" },
-    { key: "archivist", label: "Archivist", dot: "bg-archivist" },
-  ];
-
-  const currentStep = events.reduce((m, e) => Math.max(m, e.step_number), 0);
-  const lastPlan = [...events]
-    .reverse()
-    .find((e) => e.event_type === "plan")?.content.summary;
-
   const [copied, setCopied] = useState(false);
+  const [tick, setTick] = useState(0);
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  useEffect(() => {
+    if (status !== "running") return;
+    const id = setInterval(() => setTick((t) => t + 1), 1000);
+    return () => clearInterval(id);
+  }, [status]);
+  void tick;
+
   async function copyShareUrl() {
     const url = `${window.location.origin}/share/${experimentId}`;
     try {
@@ -76,92 +108,301 @@ function OrchestrationBanner({
       setCopied(true);
       setTimeout(() => setCopied(false), 1800);
     } catch {
-      // fall through
+      /* noop */
     }
   }
 
-  const statusCls =
-    status === "running"
-      ? "border-amber-500/40 bg-amber-500/10 text-amber-300"
-      : status === "complete"
-      ? "border-emerald-500/40 bg-emerald-500/10 text-emerald-300"
-      : status === "failed"
-      ? "border-rose-500/40 bg-rose-500/10 text-rose-300"
-      : "border-neutral-700 bg-neutral-800 text-neutral-400";
+  const currentStep = events.reduce(
+    (m, e) => Math.max(m, typeof e.step_number === "number" ? e.step_number : 0),
+    0
+  );
+  const pitfallCount = events.reduce(
+    (m, e) => m + ((e.semantic_tags ?? []).includes("pitfall-detected") ? 1 : 0),
+    0
+  );
 
   return (
-    <div className="sticky top-0 z-20 mb-6 rounded-lg border border-neutral-800 bg-neutral-950/90 p-4 backdrop-blur">
-      <div className="flex flex-wrap items-center gap-3">
-        <span
-          className={`rounded border px-2 py-0.5 text-[10px] uppercase tracking-wider ${statusCls}`}
+    <>
+      <header
+        style={{
+          padding: "20px 40px",
+          borderBottom: "2px dashed var(--ink)",
+          display: "flex",
+          alignItems: "center",
+          gap: 14,
+          flexWrap: "wrap",
+        }}
+      >
+        <a
+          href="/"
+          className="ser"
+          style={{
+            fontSize: 24,
+            color: "var(--ink)",
+            textDecoration: "none",
+          }}
         >
-          {status === "running" ? "● live" : status}
+          Panel
+        </a>
+        <span style={{ color: "var(--ink-3)" }}>/</span>
+        <span className="mono" style={{ fontSize: 12 }}>
+          experiment
         </span>
-        <span className="text-sm text-neutral-400">
-          step <span className="text-neutral-200">{currentStep + 1}</span> ·{" "}
-          <span className="text-neutral-200">{events.length}</span> events ·{" "}
-          <span className="text-neutral-200">{knowledge.length}</span>{" "}
-          knowledge
+        <span className="mono" style={{ fontSize: 12, color: "var(--ink-3)" }}>
+          /
         </span>
-        <div className="ml-auto flex items-center gap-2">
+        <span className="mono" style={{ fontSize: 12, fontWeight: 700 }}>
+          {experimentId}
+        </span>
+        <div
+          style={{
+            marginLeft: "auto",
+            display: "flex",
+            gap: 8,
+            flexWrap: "wrap",
+          }}
+        >
           <button
             onClick={copyShareUrl}
-            className="rounded border border-neutral-700 bg-neutral-900 px-3 py-1 text-xs text-neutral-300 hover:border-neutral-500 hover:bg-neutral-800"
+            className="btn-blob ghost"
+            style={{ padding: "8px 14px", fontSize: 12 }}
           >
-            {copied ? "✓ copied" : "Copy share link"}
+            {copied ? "✓ copied" : "⌘ Copy share link"}
           </button>
           <a
             href={`/share/${experimentId}`}
             target="_blank"
             rel="noreferrer"
-            className="rounded border border-neutral-700 bg-neutral-900 px-3 py-1 text-xs text-neutral-300 hover:border-neutral-500 hover:bg-neutral-800"
+            className="btn-blob ghost"
+            style={{ padding: "8px 14px", fontSize: 12 }}
           >
-            Open share view ↗
+            📓 Open share ↗
           </a>
+          {status === "complete" || status === "failed" ? (
+            <ColabHandoff experimentId={experimentId} variant="compact" />
+          ) : null}
+        </div>
+      </header>
+
+      <section
+        style={{
+          padding: "32px 40px 24px",
+          display: "grid",
+          gridTemplateColumns: "1.4fr 1fr",
+          gap: 32,
+          alignItems: "flex-start",
+        }}
+      >
+        <div>
+          <div
+            style={{
+              display: "flex",
+              gap: 10,
+              alignItems: "center",
+              marginBottom: 12,
+              flexWrap: "wrap",
+            }}
+          >
+            <StatusSticker status={status} />
+            {maxSteps ? (
+              <span className="chip">
+                step {currentStep + (status === "running" ? 1 : 0)} of {maxSteps}
+              </span>
+            ) : null}
+            {startMs && mounted ? (
+              <span className="chip">elapsed {elapsedString(startMs)}</span>
+            ) : null}
+          </div>
+          <h1
+            className="ser"
+            style={{
+              fontSize: 40,
+              lineHeight: 1.1,
+              margin: 0,
+              paddingBottom: 4,
+            }}
+          >
+            {goal ? (
+              goal
+            ) : (
+              <span className="ser-i" style={{ color: "var(--ink-3)" }}>
+                untitled experiment
+              </span>
+            )}
+          </h1>
+          <div
+            className="mono"
+            style={{ fontSize: 11, color: "var(--ink-3)", marginTop: 14 }}
+          >
+            {dataset ? `dataset · ${dataset}` : "dataset · —"}
+            {maxSteps ? ` · max steps ${maxSteps}` : ""}
+          </div>
+        </div>
+        <div
+          style={{
+            display: "flex",
+            gap: 10,
+            justifyContent: "flex-end",
+            flexWrap: "wrap",
+          }}
+        >
+          <StatBlock
+            n={events.length}
+            label="events"
+            color="var(--lilac)"
+            rotate={-2}
+          />
+          <StatBlock
+            n={knowledge.length}
+            label="knowledge"
+            color="var(--mint)"
+            rotate={1.5}
+          />
+          <StatBlock
+            n={pitfallCount}
+            label={pitfallCount === 1 ? "pitfall" : "pitfalls"}
+            color="var(--peach)"
+            rotate={-1}
+          />
+        </div>
+      </section>
+    </>
+  );
+}
+
+function PipelineStrip({
+  stage,
+  status,
+  lastSummary,
+}: {
+  stage: Stage;
+  status: Status;
+  lastSummary: string | null;
+}) {
+  const activeIndex = PIPELINE.indexOf(stage as AgentKey);
+  return (
+    <section style={{ padding: "0 40px 24px" }}>
+      <div
+        className="card-tight"
+        style={{
+          padding: "14px 16px",
+          display: "grid",
+          gridTemplateColumns: "1fr 220px",
+          gap: 18,
+          alignItems: "center",
+        }}
+      >
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: 6,
+            flexWrap: "wrap",
+          }}
+        >
+          {PIPELINE.map((key, i) => {
+            const a = AGENTS[key];
+            const isActive = key === stage && status === "running";
+            const isPast = activeIndex > i && status === "running";
+            const isPending = !isActive && !isPast;
+            return (
+              <Fragment key={key}>
+                <div
+                  style={{
+                    flex: 1,
+                    minWidth: 110,
+                    padding: "10px 12px",
+                    borderRadius: 8,
+                    background: isActive ? a.bg : "transparent",
+                    border: isActive
+                      ? `2.5px solid ${a.color}`
+                      : "2px dashed transparent",
+                    boxShadow: isActive ? "3px 3px 0 var(--ink)" : "none",
+                    opacity: isPending && status === "running" ? 0.5 : 1,
+                  }}
+                >
+                  <div
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: 8,
+                    }}
+                  >
+                    <span
+                      className={`agent-dot ${
+                        isActive ? "animate-bounce2" : ""
+                      }`}
+                      style={{ background: a.color }}
+                    />
+                    <span
+                      className="mono"
+                      style={{
+                        fontSize: 11,
+                        fontWeight: 700,
+                        color: a.color,
+                        textTransform: "uppercase",
+                        letterSpacing: "0.1em",
+                      }}
+                    >
+                      {a.name}
+                    </span>
+                  </div>
+                  <div
+                    className="ser-i"
+                    style={{ fontSize: 13, marginTop: 4 }}
+                  >
+                    {isActive
+                      ? stageLabel(stage, status)
+                      : isPast
+                      ? "✓ done"
+                      : "pending"}
+                  </div>
+                </div>
+                {i < PIPELINE.length - 1 ? (
+                  <span
+                    style={{
+                      fontSize: 16,
+                      color: "var(--ink-3)",
+                      fontWeight: 700,
+                    }}
+                  >
+                    →
+                  </span>
+                ) : null}
+              </Fragment>
+            );
+          })}
+        </div>
+        <div
+          style={{
+            paddingLeft: 18,
+            borderLeft: "2px dashed var(--ink)",
+            minWidth: 200,
+          }}
+        >
+          <div className="eyebrow">currently</div>
+          <div
+            className="ser"
+            style={{
+              fontSize: 15,
+              lineHeight: 1.25,
+              marginTop: 4,
+              paddingBottom: 2,
+            }}
+          >
+            {lastSummary
+              ? lastSummary
+              : status === "running"
+              ? "Spinning up the jury…"
+              : status === "complete"
+              ? "Run complete."
+              : status === "failed"
+              ? "Run failed."
+              : "Idle."}
+          </div>
         </div>
       </div>
-
-      <div className="mt-4 flex flex-wrap items-center gap-0.5">
-        {stages.map((s, i) => {
-          const isActive = s.key === stage;
-          const isPast =
-            stages.findIndex((x) => x.key === stage) > i && status === "running";
-          const isIdle = status !== "running";
-          return (
-            <div key={s.key} className="flex items-center">
-              <div
-                className={`flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[11px] transition ${
-                  isActive && !isIdle
-                    ? "border-white/40 bg-white/10 text-neutral-100"
-                    : isPast
-                    ? "border-neutral-700 bg-neutral-900 text-neutral-500"
-                    : "border-neutral-800 bg-neutral-950 text-neutral-500"
-                }`}
-              >
-                <span
-                  className={`h-1.5 w-1.5 rounded-full ${
-                    isActive && !isIdle
-                      ? s.dot + " animate-pulse"
-                      : "bg-neutral-700"
-                  }`}
-                />
-                {s.label}
-              </div>
-              {i < stages.length - 1 ? (
-                <span className="px-1 text-neutral-700">→</span>
-              ) : null}
-            </div>
-          );
-        })}
-      </div>
-
-      {lastPlan ? (
-        <div className="mt-3 truncate text-xs text-neutral-500">
-          <span className="text-neutral-600">currently:</span>{" "}
-          <span className="text-neutral-300">{lastPlan}</span>
-        </div>
-      ) : null}
-    </div>
+    </section>
   );
 }
 
@@ -170,18 +411,37 @@ export default function LiveStream({
   initialStatus,
   initialEvents,
   initialKnowledge,
+  goal,
+  dataset,
+  maxSteps,
+  startedAt,
 }: {
   experimentId: string;
   initialStatus: Status;
   initialEvents: DeliberationEvent[];
   initialKnowledge: KnowledgeEntry[];
+  goal: string | null;
+  dataset: string | null;
+  maxSteps: number | null;
+  startedAt: string | null;
 }) {
   const [events, setEvents] = useState<DeliberationEvent[]>(initialEvents);
-  const [knowledge, setKnowledge] = useState<KnowledgeEntry[]>(initialKnowledge);
+  const [knowledge, setKnowledge] =
+    useState<KnowledgeEntry[]>(initialKnowledge);
   const [status, setStatus] = useState<Status>(initialStatus);
   const seenIds = useRef<Set<string>>(
     new Set(initialEvents.map((e) => e.event_id))
   );
+
+  const startMs = useMemo(() => {
+    if (startedAt) {
+      const t = Date.parse(startedAt);
+      return Number.isFinite(t) ? t : null;
+    }
+    return initialEvents.length > 0
+      ? Date.parse(initialEvents[0].timestamp)
+      : Date.now();
+  }, [startedAt, initialEvents]);
 
   useEffect(() => {
     if (status !== "running" && initialEvents.length > 0) return;
@@ -201,9 +461,9 @@ export default function LiveStream({
               knowledge_id: parsed.event_id,
               experiment_id: parsed.experiment_id,
               created_at: parsed.timestamp,
-              claim: parsed.content.summary.replace(/^\[[^\]]+\]\s*/, ""),
+              claim: (parsed.content?.summary ?? "").replace(/^\[[^\]]+\]\s*/, ""),
               kind:
-                (parsed.content.summary.match(/^\[([^\]]+)\]/)?.[1] as
+                ((parsed.content?.summary ?? "").match(/^\[([^\]]+)\]/)?.[1] as
                   | "pattern"
                   | "pitfall"
                   | "heuristic"
@@ -236,26 +496,68 @@ export default function LiveStream({
     () => stageFromEvents(events, status),
     [events, status]
   );
+  const lastEvent = events.length > 0 ? events[events.length - 1] : null;
+  const lastSummary = lastEvent?.content?.summary ?? null;
+  const activeStep = bundles.length > 0 ? bundles[bundles.length - 1].step : -1;
 
   return (
     <>
-      <OrchestrationBanner
-        stage={stage}
+      <ExperimentHeader
+        experimentId={experimentId}
         status={status}
+        goal={goal}
+        dataset={dataset}
+        maxSteps={maxSteps}
         events={events}
         knowledge={knowledge}
-        experimentId={experimentId}
+        startMs={startMs}
       />
-      <KnowledgePanel knowledge={knowledge} />
-      <div className="space-y-4">
+      <PipelineStrip
+        stage={stage}
+        status={status}
+        lastSummary={lastSummary}
+      />
+      <section style={{ padding: "0 40px 24px" }}>
+        <KnowledgePanel knowledge={knowledge} />
+      </section>
+      <section style={{ padding: "0 40px 60px" }}>
+        <h2
+          className="ser"
+          style={{
+            fontSize: 30,
+            margin: "8px 0 16px",
+            lineHeight: 1.1,
+            paddingBottom: 2,
+          }}
+        >
+          What the jury did 🗂️
+        </h2>
         {bundles.length === 0 ? (
-          <div className="rounded-xl border border-dashed border-neutral-800 p-10 text-center text-sm text-neutral-500">
+          <div
+            className="card-tight"
+            style={{
+              padding: 28,
+              background: "var(--cream-2)",
+              textAlign: "center",
+              fontSize: 14,
+              color: "var(--ink-2)",
+            }}
+          >
             waiting for the jury to start…
           </div>
         ) : (
-          bundles.map((b) => <StepCard key={b.step} bundle={b} />)
+          bundles
+            .slice()
+            .reverse()
+            .map((b) => (
+              <StepCard
+                key={b.step}
+                bundle={b}
+                active={status === "running" && b.step === activeStep}
+              />
+            ))
         )}
-      </div>
+      </section>
     </>
   );
 }
